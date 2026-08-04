@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════
+   THEME TOKENS
+   Dark + Gold = default.
+   Light = clean, high-contrast, professional.
+   ══════════════════════════════════════════ */
+
+:root {
+  /* ── Dark theme (default) — true dark, not brown ── */
+  --bg:          #0A0A0A;
+  --surface-1:   #141414;
+  --surface-2:   #1C1C1C;
+  --ink:         #F5F5F5;
+  --ink-2:       #A0A0A0;
+  --ink-3:       #666666;
+  --line:        rgba(255,255,255,.08);
+  --line-strong: rgba(255,255,255,.16);
+  --brass:       #D4A84B;
+  --brass-soft:  rgba(212,168,75,.12);
+  --jade:        #34D399;
+  --jade-soft:   rgba(52,211,153,.12);
+  --clay:        #F87171;
+  --clay-soft:   rgba(248,113,113,.12);
+
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  /* ── Light theme — crisp whites, strong contrast ── */
+  --bg:          #FFFFFF;
+  --surface-1:   #F7F7F7;
+  --surface-2:   #EFEFEF;
+  --ink:         #111111;
+  --ink-2:       #555555;
+  --ink-3:       #999999;
+  --line:        #E0E0E0;
+  --line-strong: #CCCCCC;
+  --brass:       #B8860B;
+  --brass-soft:  #FFF8E7;
+  --jade:        #059669;
+  --jade-soft:   #ECFDF5;
+  --clay:        #DC2626;
+  --clay-soft:   #FEF2F2;
+
+  color-scheme: light;
+}
+
+/* ── Map tokens into Tailwind v4 ── */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brass: var(--brass);
+  --color-brass-soft: var(--brass-soft);
+  --color-jade: var(--jade);
+  --color-jade-soft: var(--jade-soft);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+/* ── Base ── */
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body), "Segoe UI", system-ui, sans-serif;
+}
+
+/* ── Typography ── */
+h1, h2, h3, .font-display {
+  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
+}
+
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ── Focus ring ── */
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brass); }
+
+/* ── Hide scrollbar ── */
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Safe area ── */
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* ── Animations ── */
+@keyframes scale-in {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-scale-in { animation: scale-in 0.3s cubic-bezier(0.34, 1.4, 0.64, 1); }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fade-up 0.4s ease-out both; }
+
+@keyframes fill-bar {
+  from { width: 0; }
+}
+.animate-fill-bar { animation: fill-bar 0.8s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-scale-in,
+  .animate-fade-up,
+  .animate-fill-bar { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}

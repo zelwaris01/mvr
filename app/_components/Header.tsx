@@ -19,32 +19,30 @@ export function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 bg-bg/90 backdrop-blur-xl border-b border-line">
-      <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-brass flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-white">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" />
-              <path d="M2 17l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
-              <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
-            </svg>
-          </div>
-          <span className="text-sm font-display font-bold tracking-[0.08em] text-ink">
-            SMART MALL
+    <header className="sticky top-0 z-50 bg-bg/80 backdrop-blur-xl border-b border-line">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
+        {/* Wordmark — elegant serif */}
+        <Link href="/" className="flex items-baseline gap-2.5">
+          <span className="font-display text-2xl text-ink tracking-[0.04em] leading-none">
+            Meridian
+          </span>
+          <span className="hidden sm:inline text-ink-3 text-[10px] uppercase tracking-[0.18em]">
+            Anfa Place
           </span>
         </Link>
 
-        {/* Desktop nav links */}
-        <nav className="hidden md:flex items-center gap-1">
+        {/* Desktop pill nav */}
+        <nav className="hidden md:flex items-center gap-1.5">
           {NAV_LINKS.map((link) => {
             const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  active ? "text-brass bg-brass-soft" : "text-ink-2 hover:text-ink hover:bg-surface-2"
+                className={`px-4 py-2 rounded-full text-[11.5px] font-medium tracking-wide transition-colors border ${
+                  active
+                    ? "text-brass bg-brass-soft border-brass-line"
+                    : "text-ink-2 border-line hover:text-ink hover:bg-surface-2 hover:border-line-strong"
                 }`}
               >
                 {link.label}
@@ -55,10 +53,17 @@ export function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
-          {/* XP pill */}
+          {/* GOLD points pill */}
           {isHydrated && (
-            <Link href="/rewards" className="flex items-center gap-1.5 bg-surface-2 border border-line rounded-full px-2.5 py-1 hover:border-line-strong transition-colors">
-              <span className="text-brass text-xs font-bold tabular-nums">{progress.totalXp} XP</span>
+            <Link
+              href="/rewards"
+              className="flex items-center gap-2 pl-3.5 pr-2 py-1.5 rounded-full bg-brass-soft border border-brass-line hover:bg-brass/20 transition-colors"
+            >
+              <span className="text-brass text-[10px] font-semibold uppercase tracking-[0.08em]">
+                {level.label}
+              </span>
+              <span className="text-ink text-xs font-medium tabular-nums">{progress.totalXp} pts</span>
+              <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#453d31] to-[#1d1a15] border border-brass-line" />
             </Link>
           )}
 
@@ -66,7 +71,7 @@ export function Header() {
           <button
             onClick={toggle}
             aria-label="Changer le thème"
-            className="w-8 h-8 rounded-full bg-surface-2 border border-line flex items-center justify-center text-ink-3 hover:text-ink hover:border-line-strong transition-colors"
+            className="w-9 h-9 rounded-full bg-surface-2 border border-line flex items-center justify-center text-ink-3 hover:text-brass hover:border-brass-line transition-colors"
           >
             {mounted && theme === "dark" ? (
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>

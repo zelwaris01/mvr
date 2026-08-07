@@ -6,8 +6,6 @@ import Link from "next/link";
 import { STORES } from "@/app/_lib/stores-data";
 import { QUESTIONS } from "@/app/_lib/questions-data";
 import { useGame } from "@/app/_components/GameStateProvider";
-import { SectionTitle } from "@/app/_components/SectionTitle";
-import { StoreLogo } from "@/app/_components/StoreLogo";
 
 export default function StoreDetailPage({
   params,
@@ -22,6 +20,10 @@ export default function StoreDetailPage({
   const answeredCount = storeQuestions.filter(
     (q) => progress.answeredQuestions[q.id]
   ).length;
+  const correctCount = storeQuestions.filter(
+    (q) => progress.answeredQuestions[q.id]?.isCorrect
+  ).length;
+  const explored = progress.exploredStores.includes(slug);
 
   useEffect(() => {
     if (isHydrated && store) {
@@ -31,146 +33,206 @@ export default function StoreDetailPage({
 
   if (!store) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-20 text-center">
-        <p className="text-ink-2">Boutique introuvable</p>
-        <Link href="/stores" className="text-brass text-sm mt-4 inline-block">
-          ← Retour aux boutiques
+      <div className="max-w-[1360px] mx-auto px-5 py-32 text-center">
+        <p className="font-display text-[28px] text-ink-2">Boutique introuvable</p>
+        <Link href="/stores" className="btn btn-ghost mt-7">
+          Retour au répertoire
         </Link>
       </div>
     );
   }
 
+  const stats = [
+    { value: String(store.products.length), label: "pièces en vitrine" },
+    { value: String(storeQuestions.length), label: "questions du quiz" },
+    { value: `${correctCount}/${storeQuestions.length || 1}`, label: "bonnes réponses" },
+    {
+      value: store.offers[0]?.discount ?? "—",
+      label: store.offers[0] ? "offre en cours" : "pas d'offre",
+      accent: true,
+    },
+  ];
+
   return (
-    <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-6 space-y-8 animate-fade-up">
-      {/* Back link */}
-      <Link
-        href="/stores"
-        className="text-ink-3 hover:text-brass text-xs transition-colors inline-flex items-center gap-1 uppercase tracking-wider"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-        Boutiques
+    <div className="max-w-[1360px] mx-auto px-5 md:px-[34px] pt-8 md:pt-10 pb-16 md:pb-24 animate-fade-up">
+      <Link href="/stores" className="backlink mb-6 md:mb-[26px]">
+        ← Retour au répertoire
       </Link>
 
-      {/* Store hero banner */}
-      <div className="relative rounded-2xl overflow-hidden">
-        {/* Background image from first product */}
-        <div className="relative h-52 md:h-72">
-          <Image
-            src={store.products[0]?.image || store.logo}
-            alt={store.name}
-            fill
-            className="object-cover opacity-40"
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-bg via-bg/80 to-bg/40" />
-          <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-bg/50" />
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 lg:gap-[34px] items-start">
+        {/* ════ Main column ════ */}
+        <div className="flex flex-col gap-7 md:gap-[30px]">
+          {/* ── Hero plate ── */}
+          <div className="plate relative h-[240px] md:h-[290px] rounded-[14px] border border-line">
+            {store.products[0] && (
+              <Image
+                src={store.products[0].image}
+                alt={store.name}
+                fill
+                className="object-cover opacity-45"
+                sizes="100vw"
+                priority
+              />
+            )}
+            <div className="absolute inset-0 bg-[linear-gradient(105deg,var(--bg)_10%,transparent_70%)]" />
+            <div className="brass-glow" />
 
-        {/* Content overlay */}
-        <div className="absolute inset-0 flex items-center p-6 md:p-10">
-          <div className="flex flex-col md:flex-row gap-5 items-start md:items-center w-full">
-            {/* Logo */}
-            <StoreLogo slug={store.slug} name={store.name} size={80} className="md:!w-[112px] md:!h-[112px] flex-shrink-0 backdrop-blur" />
-
-            {/* Info */}
-            <div className="flex-1">
-              <span className="text-[9px] text-brass uppercase tracking-[0.25em] font-medium">
-                {store.category}
-              </span>
-              <h1 className="text-2xl md:text-4xl font-black mt-1 mb-2">
-                {store.name}
-              </h1>
-              <p className="text-xs md:text-sm text-ink-2 leading-relaxed max-w-lg">
-                {store.description}
-              </p>
-
-              {storeQuestions.length > 0 && (
-                <Link
-                  href={`/quiz/${store.slug}`}
-                  className="inline-flex items-center gap-2 mt-4 bg-brass hover:bg-brass/90 text-white font-bold rounded-full px-6 py-2.5 text-sm transition-all"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
-                  {answeredCount > 0
-                    ? `Quiz (${answeredCount}/${storeQuestions.length})`
-                    : "Commencer le Quiz"}
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Products grid */}
-      <section>
-        <SectionTitle className="mb-5">Photos & Produits</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {store.products.map((product) => (
-            <div
-              key={product.id}
-              className="bg-surface-1 border border-line rounded-2xl overflow-hidden group hover:border-brass/30 transition-all"
-            >
-              <div className="aspect-square relative overflow-hidden bg-surface-2">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-surface-1 via-transparent to-transparent opacity-60" />
-                {/* Price tag */}
-                <div className="absolute bottom-3 right-3 bg-surface-1/80 backdrop-blur rounded-full px-3 py-1 border border-line">
-                  <span className="text-brass font-bold text-xs">{product.price}</span>
-                </div>
+            <div className="absolute left-6 md:left-[34px] bottom-6 md:bottom-[30px] flex items-end gap-5">
+              <div className="hidden sm:grid w-[82px] h-[82px] rounded-xl bg-fill place-items-center flex-shrink-0">
+                <span className="font-display text-[30px] leading-none text-on-fill">
+                  {store.name.charAt(0)}
+                </span>
               </div>
-              <div className="p-4">
-                <h3 className="text-sm font-bold">{product.name}</h3>
-                <p className="text-[10px] text-ink-3 mt-0.5">{store.name}</p>
+              <div className="flex flex-col gap-2">
+                <span className="eyebrow">
+                  {store.category} · Anfa Place{explored ? " · Visitée" : ""}
+                </span>
+                <h1 className="font-display text-ink text-[34px] md:text-[46px] leading-none">
+                  {store.name}
+                </h1>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Offers */}
-      {store.offers.length > 0 && (
-        <section>
-          <SectionTitle className="mb-5">Offres & Promos</SectionTitle>
-          <div className="space-y-3">
-            {store.offers.map((offer) => (
-              <div
-                key={offer.id}
-                className="bg-surface-1 border border-line rounded-2xl p-5 flex items-center gap-5"
+            {storeQuestions.length > 0 && (
+              <Link
+                href={`/quiz/${store.slug}`}
+                className="btn btn-brass absolute right-5 md:right-[30px] bottom-6 md:bottom-[30px]"
               >
-                <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl bg-brass-soft flex items-center justify-center border border-brass/20">
-                  <span className="text-brass font-black text-xl md:text-2xl">
-                    {offer.discount}
+                {answeredCount === 0
+                  ? `Quiz · +${storeQuestions.length * 50} XP`
+                  : answeredCount < storeQuestions.length
+                  ? `Continuer (${answeredCount}/${storeQuestions.length})`
+                  : "Quiz terminé"}
+              </Link>
+            )}
+          </div>
+
+          {/* ── Stat strip ── */}
+          <div className="strip grid-cols-2 md:grid-cols-4">
+            {stats.map((stat) => (
+              <div key={stat.label} className="flex flex-col gap-1.5">
+                <span
+                  className={`font-display text-[24px] leading-none ${
+                    stat.accent ? "text-brass" : "text-ink"
+                  }`}
+                >
+                  {stat.value}
+                </span>
+                <span className="text-[10.5px] text-ink-3 leading-none">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Collection ── */}
+          <div className="flex items-end justify-between gap-4">
+            <h2 className="font-display text-[26px] leading-none text-ink">La collection</h2>
+            <span className="text-[11px] uppercase tracking-[0.1em] text-ink-3">
+              {store.products.length} pièces
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            {store.products.map((product) => (
+              <div key={product.id} className="group flex flex-col gap-3">
+                <div className="plate relative aspect-[4/5] rounded-[10px] border border-line group-hover:border-brass-line transition-colors">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    className="object-cover group-hover:scale-[1.04] transition-transform duration-500"
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                  />
+                  <div className="brass-glow" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[13px] font-semibold text-ink leading-[1.2]">
+                    {product.name}
                   </span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-sm md:text-base">{offer.title}</h3>
-                  <p className="text-xs text-ink-2 mt-1 leading-relaxed">
-                    {offer.description}
-                  </p>
-                </div>
-                <div className="hidden md:block flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-brass-soft flex items-center justify-center">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brass">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </div>
+                  <span className="text-[12px] text-ink-3 leading-none tabular-nums">
+                    {product.price}
+                  </span>
                 </div>
               </div>
             ))}
           </div>
-        </section>
-      )}
+        </div>
+
+        {/* ════ Sidebar ════ */}
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-24">
+          {/* About */}
+          <div className="card p-5 flex flex-col gap-3.5">
+            <span className="eyebrow">La maison</span>
+            <p className="text-[11.5px] leading-[1.6] text-ink-2 text-pretty">
+              {store.description}
+            </p>
+            <div className="h-px bg-line" />
+            {[
+              { k: "Catégorie", v: store.category },
+              { k: "Horaires", v: "10:00 — 22:00" },
+              { k: "Statut", v: explored ? "Visitée" : "Non visitée" },
+            ].map((row) => (
+              <div key={row.k} className="flex justify-between text-[12.5px]">
+                <span className="text-ink-3">{row.k}</span>
+                <span className="text-ink">{row.v}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Offers */}
+          {store.offers.map((offer) => (
+            <div
+              key={offer.id}
+              className="p-5 rounded-xl border border-brass-line bg-brass-soft flex flex-col gap-2.5"
+            >
+              <span className="eyebrow">Offre membre · {offer.discount}</span>
+              <span className="font-display text-[21px] leading-[1.2] text-ink">
+                {offer.title}
+              </span>
+              <p className="text-[11.5px] leading-[1.6] text-ink-2 text-pretty">
+                {offer.description}
+              </p>
+            </div>
+          ))}
+
+          {/* Quiz */}
+          {storeQuestions.length > 0 && (
+            <div className="card p-5 flex flex-col gap-3.5">
+              <span className="eyebrow eyebrow-muted">Le défi de la boutique</span>
+              <div className="flex gap-1">
+                {storeQuestions.map((q) => {
+                  const answer = progress.answeredQuestions[q.id];
+                  return (
+                    <div
+                      key={q.id}
+                      className={`h-1 flex-1 rounded-full ${
+                        answer
+                          ? answer.isCorrect
+                            ? "bg-jade"
+                            : "bg-clay"
+                          : "bg-surface-2"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+              <p className="text-[11.5px] leading-[1.6] text-ink-2">
+                {answeredCount === storeQuestions.length
+                  ? `Terminé — ${correctCount}/${storeQuestions.length} bonnes réponses.`
+                  : `${storeQuestions.length - answeredCount} question${
+                      storeQuestions.length - answeredCount > 1 ? "s" : ""
+                    } restante${
+                      storeQuestions.length - answeredCount > 1 ? "s" : ""
+                    }, 50 XP chacune.`}
+              </p>
+              <Link href={`/quiz/${store.slug}`} className="btn btn-fill w-full">
+                {answeredCount === storeQuestions.length
+                  ? "Revoir le quiz"
+                  : "Répondre maintenant"}
+              </Link>
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

@@ -1,20 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Inter } from "next/font/google";
+import { Archivo, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { GameStateProvider } from "@/app/_components/GameStateProvider";
 import { Header } from "@/app/_components/Header";
 import { BottomNav } from "@/app/_components/BottomNav";
 
-const inter = Inter({
+const archivo = Archivo({
   variable: "--font-body",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const dmSans = DM_Sans({
+const instrumentSerif = Instrument_Serif({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "700", "800"],
+  weight: "400",
+  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -28,7 +30,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0A0A0A",
+  themeColor: "#0b0a09",
 };
 
 const themeScript = `(function(){try{var t=localStorage.getItem('smartmall_theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`;
@@ -41,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${inter.variable} ${dmSans.variable} h-full antialiased`}
+      className={`${archivo.variable} ${instrumentSerif.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

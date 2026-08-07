@@ -33,7 +33,7 @@ export default function StoresPage() {
       <SectionTitle
         eyebrow={`Anfa Place · ${progress.exploredStores.length} sur ${STORES.length} visitées`}
         action={
-          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar -mx-1 px-1 py-1">
+          <div className="rail flex gap-1.5 overflow-x-auto hide-scrollbar -mx-1 px-1 py-1">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}

@@ -176,7 +176,7 @@ export default function RewardsPage() {
                       reset();
                       setShowConfirm(false);
                     }}
-                    className="btn bg-clay text-white hover:opacity-90"
+                    className="btn bg-clay text-on-brass hover:opacity-90"
                   >
                     Réinitialiser
                   </button>

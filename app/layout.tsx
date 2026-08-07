@@ -30,6 +30,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Dark is the default theme; useTheme re-points this meta on a switch.
   themeColor: "#0b0a09",
 };
 

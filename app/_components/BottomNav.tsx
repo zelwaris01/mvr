@@ -24,10 +24,17 @@ export function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
+                aria-current={active ? "page" : undefined}
+                className={`relative flex flex-col items-center gap-0.5 px-3 pt-1.5 pb-1 rounded-lg transition-[color,transform] duration-200 active:scale-95 ${
                   active ? "text-brass" : "text-ink-3 hover:text-ink-2"
                 }`}
               >
+                {/* Brass tick over the active tab — grows in rather than blinking */}
+                <span
+                  className={`absolute top-0 h-px rounded-full bg-brass transition-all duration-300 ease-out ${
+                    active ? "w-5 opacity-100" : "w-0 opacity-0"
+                  }`}
+                />
                 {item.icon}
                 <span className="text-[9px] font-medium">{item.label}</span>
               </Link>

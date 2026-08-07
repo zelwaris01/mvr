@@ -24,7 +24,7 @@
   --jade-soft:   rgba(124,174,134,.14);
   --clay:        #d98873;
   --clay-soft:   rgba(217,136,115,.14);
-  /* Contrasting text that sits on a brass fill */
+  /* Contrasting text for any accent fill — brass, jade or clay */
   --on-brass:    #0b0a09;
   /* Inverted fill — the ivory "primary" button of the Meridian kit */
   --fill:        #f4f0e9;
@@ -116,7 +116,11 @@
 }
 
 /* ── Base ── */
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Anchored jumps land below the 64px sticky header instead of under it */
+  scroll-padding-top: 5.5rem;
+}
 
 body {
   background: var(--bg);
@@ -137,6 +141,9 @@ body {
   font-family: var(--font-display), Georgia, "Times New Roman", serif;
   font-weight: 400;
   letter-spacing: .01em;
+  /* Evens out the line lengths of a display heading instead of leaving one
+     orphaned word on the last line. No-op on the single-line uses. */
+  text-wrap: balance;
 }
 
 .tabular-nums { font-variant-numeric: tabular-nums; }
@@ -163,13 +170,21 @@ body {
   border: 1px solid var(--line);
   background: var(--card);
   border-radius: 14px;
-  transition: border-color .22s ease, background-color .22s ease;
+  transition: border-color .22s ease, background-color .22s ease,
+              transform .22s cubic-bezier(.22,.61,.36,1);
 }
 
-/* Interactive card — warms to brass on hover */
+/* Interactive card — warms to brass and lifts a single pixel-and-a-half on
+   hover. Any more reads as a bounce; this just acknowledges the cursor. */
 .card-link:hover {
   border-color: var(--brass-line);
   background: var(--brass-soft);
+  transform: translateY(-1.5px);
+}
+/* Pressing settles it back down — the click has somewhere to land */
+.card-link:active {
+  transform: translateY(0);
+  transition-duration: .08s;
 }
 
 /* Frosted overlay panel that floats above imagery */
@@ -193,6 +208,24 @@ body {
   inset: 0;
   background: radial-gradient(75% 85% at 30% 28%, var(--glow), transparent 68%);
   pointer-events: none;
+}
+
+/* ── Progress ring ──
+   A conic-gradient stop can't be transitioned on its own, so the sweep angle
+   is registered as a typed custom property. The browser can then interpolate
+   it, and the ring winds up to its value instead of snapping there the moment
+   stored progress hydrates. */
+@property --ring-pct {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+.ring {
+  background: conic-gradient(
+    var(--brass) 0 var(--ring-pct),
+    var(--line) var(--ring-pct) 100%
+  );
+  transition: --ring-pct .9s cubic-bezier(.22,.61,.36,1);
 }
 
 /* Divided stat strip — cells separated by 1px of --line showing through */
@@ -225,8 +258,11 @@ body {
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease,
+              transform .12s ease;
 }
+/* Press feedback — the one place a scale reads as touch rather than as decoration */
+.btn:active { transform: scale(.972); }
 
 /* Primary — inverted fill (ivory on dark, ink on light), warms to brass */
 .btn-fill { background: var(--fill); color: var(--on-fill); }
@@ -252,8 +288,10 @@ body {
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease,
+              transform .12s ease;
 }
+.pill:active { transform: scale(.96); }
 .pill-on { background: var(--fill); color: var(--on-fill); border: 1px solid transparent; }
 .pill-off { border: 1px solid var(--line-strong); color: var(--ink-2); }
 .pill-off:hover { border-color: var(--brass-line); color: var(--brass); }
@@ -290,6 +328,17 @@ body {
 }
 .backlink:hover { color: var(--brass); }
 
+/* ── Theme toggle icons ──
+   Both glyphs are rendered; which one shows is decided by the data-theme
+   attribute the blocking script sets in <head>. Doing this in CSS rather than
+   in React means the correct icon is painted on the first frame instead of
+   flipping once the client hydrates. The button offers the theme you'd move
+   *to*: sun while dark, moon while light. */
+.theme-icon-sun  { display: block; }
+.theme-icon-moon { display: none; }
+[data-theme="light"] .theme-icon-sun  { display: none; }
+[data-theme="light"] .theme-icon-moon { display: block; }
+
 /* ── Focus ring ── */
 :focus-visible {
   outline: 2px solid var(--brass);
@@ -312,6 +361,19 @@ body {
   mask-image: linear-gradient(90deg, #000 88%, transparent);
 }
 
+/* ── Horizontal rail ──
+   Everything that scrolls sideways. `proximity` snapping tidies a flick up
+   against the nearest card without fighting a deliberate half-scroll the way
+   `mandatory` does, and containing the overscroll stops a rail that has hit
+   its end from scrolling the page behind it — or from firing the browser's
+   back-swipe gesture on a trackpad. */
+.rail {
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 4px;
+}
+.rail > * { scroll-snap-align: start; }
+
 /* ── Safe area ── */
 .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
@@ -333,9 +395,53 @@ body {
 }
 .animate-fill-bar { animation: fill-bar 0.8s ease-out both; }
 
+/* ══════════════════════════════════════════
+   SCROLL-LINKED MOTION
+   Driven by scroll position rather than a timer, so nothing animates unless
+   the reader is actually moving — and nothing is ever mid-flight when they
+   stop. Both blocks are wrapped in @supports: where scroll timelines are
+   unavailable (Safari, Firefox) the content simply renders in its finished
+   state. Nothing here is load-bearing for legibility.
+   ══════════════════════════════════════════ */
+
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* The header sits flush at the top of the page and only earns its hairline
+   and shadow once there is content scrolled underneath it. */
+@keyframes header-settle {
+  from { border-bottom-color: transparent; box-shadow: 0 0 0 rgba(0,0,0,0); }
+  to   { border-bottom-color: var(--line); box-shadow: 0 8px 26px -18px rgba(0,0,0,.7); }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* A section lifts into place as it enters. The range is a fixed 180px
+       rather than a percentage: a percentage of `entry` is measured against
+       the element's own height, so the tall store grid would still be
+       half-faded several screens later. A fixed distance means every section
+       settles after the same short scroll, whatever its size. */
+    .reveal {
+      animation: reveal-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 180px;
+    }
+
+    .site-header {
+      animation: header-settle linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 80px;
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-scale-in,
   .animate-fade-up,
   .animate-fill-bar { animation: none; }
   * { transition-duration: 0.01ms !important; }
+  /* Smooth scrolling is motion too — let the browser jump instead */
+  html { scroll-behavior: auto; }
 }

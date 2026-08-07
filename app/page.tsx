@@ -135,7 +135,7 @@ export default function HomePage() {
 
           {/* Brand rail */}
           <div className="flex items-center gap-3 pointer-events-auto">
-            <div className="flex gap-3 flex-1 overflow-x-auto hide-scrollbar rail-mask pb-0.5">
+            <div className="rail flex gap-3 flex-1 overflow-x-auto hide-scrollbar rail-mask pb-0.5">
               {STORES.map((store) => (
                 <Link
                   key={store.slug}
@@ -180,7 +180,7 @@ export default function HomePage() {
           ════════════════════════════════════════ */}
       <div className="max-w-[1440px] mx-auto px-5 md:px-[34px] pt-14 md:pt-[76px] flex flex-col gap-16 md:gap-[86px]">
         {/* ── Directory ── */}
-        <section className="flex flex-col gap-6 md:gap-[26px]">
+        <section className="reveal flex flex-col gap-6 md:gap-[26px]">
           <SectionTitle
             eyebrow="Anfa Place · Niveau 1 & 2"
             action={
@@ -203,7 +203,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Trending ── */}
-        <section className="flex flex-col gap-6 md:gap-[26px]">
+        <section className="reveal flex flex-col gap-6 md:gap-[26px]">
           <SectionTitle
             eyebrow="En rayon aujourd'hui"
             action={
@@ -255,7 +255,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Editorial split: quiz feature + membership ── */}
-        <section className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-[22px]">
+        <section className="reveal grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-[22px]">
           {/* Feature panel */}
           <div className="relative min-h-[320px] rounded-2xl overflow-hidden border border-line bg-[linear-gradient(125deg,var(--surface-2),var(--bg)_62%,var(--surface-1))]">
             <div className="absolute inset-0 bg-[radial-gradient(65%_85%_at_78%_28%,var(--glow),transparent_68%)]" />
@@ -348,7 +348,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Continue ── */}
-        <section className="flex flex-col gap-6 md:gap-[26px]">
+        <section className="reveal flex flex-col gap-6 md:gap-[26px]">
           <SectionTitle eyebrow="Continuer votre visite">
             Ailleurs dans le mall
           </SectionTitle>

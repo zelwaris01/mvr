@@ -23,12 +23,16 @@ export function ProgressRing({
 
   return (
     <div
-      className={`relative grid place-items-center rounded-full flex-shrink-0 ${className}`}
-      style={{
-        width: size,
-        height: size,
-        background: `conic-gradient(var(--brass) 0 ${clamped}%, var(--line) ${clamped}% 100%)`,
-      }}
+      className={`ring relative grid place-items-center rounded-full flex-shrink-0 ${className}`}
+      style={
+        {
+          width: size,
+          height: size,
+          // .ring builds the conic sweep from this; typed via @property so it
+          // animates rather than jumping when progress arrives.
+          "--ring-pct": `${clamped}%`,
+        } as React.CSSProperties
+      }
     >
       <div
         className="grid place-items-center rounded-full bg-bg"

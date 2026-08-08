@@ -1,26 +1,17 @@
 // ---- Store ----
-export interface Product {
-  id: string;
-  name: string;
-  image: string;
-  price: string;
-}
-
-export interface Offer {
-  id: string;
-  title: string;
-  description: string;
-  discount: string;
-}
-
+/**
+ * A brand in the mall. Deliberately thin: the visit is the product, so a store
+ * exists here only to give a Matterport pin a name, a quiz and a reward.
+ * Products, offers and logo images were dropped with the catalogue pages —
+ * StoreLogo renders initials, so no artwork is needed.
+ */
 export interface Store {
   slug: string;
   name: string;
-  logo: string;
   description: string;
   category: string;
-  products: Product[];
-  offers: Offer[];
+  /** Shown in the quiz drawer as "DÉBLOQUE — {reward}". */
+  reward: string;
 }
 
 // ---- Quiz ----
@@ -50,15 +41,6 @@ export interface Badge {
   condition: BadgeCondition;
 }
 
-export interface Reward {
-  id: string;
-  title: string;
-  description: string;
-  discount: string;
-  storeName: string;
-  requiredXp: number;
-}
-
 // ---- User Progress (persisted in LocalStorage) ----
 export interface AnswerRecord {
   selectedIndex: number;
@@ -71,6 +53,5 @@ export interface UserProgress {
   answeredQuestions: Record<string, AnswerRecord>;
   totalXp: number;
   unlockedBadges: string[];
-  unlockedRewards: string[];
   completedAt: number | null;
 }

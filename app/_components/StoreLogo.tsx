@@ -15,6 +15,8 @@ const INITIALS: Record<string, string> = {
   sephora: "S",
   nike: "N",
   paul: "P",
+  springfield: "SP",
+  womensecret: "WS",
 };
 
 export function StoreLogo({

@@ -1,38 +1,222 @@
 import type { Question } from "./types";
+import { XP_PER_QUESTION } from "./constants";
 
+/**
+ * Three questions per store, in the order they are asked.
+ *
+ * IDs are `${slug}-${n}` rather than a running integer so adding a store never
+ * means hunting for the next free number, and so a stale localStorage payload
+ * from a deleted store simply stops matching instead of colliding.
+ *
+ * ⚠ The questions carrying a `// placeholder` marker were written from public
+ * knowledge of the brands to reach three per store. They are plausible and
+ * fact-checked as far as public sources go, but they have NOT been approved by
+ * Anfa Place. Review before launch.
+ */
 export const QUESTIONS: Question[] = [
+  // ── ZARA ──
   {
-    id: "q1",
+    id: "zara-1",
     storeSlug: "zara",
-    questionText: "En quelle année ZARA a-t-elle été fondée ?",
-    options: ["1965", "1975", "1985", "1995"],
+    questionText: "Dans quel pays la marque ZARA a-t-elle été fondée ?",
+    options: ["Italie", "Espagne", "Portugal", "France"],
     correctIndex: 1,
     explanation:
       "ZARA a été fondée en 1975 par Amancio Ortega à La Corogne, en Espagne.",
-    xpReward: 50,
+    xpReward: XP_PER_QUESTION,
   },
   {
-    id: "q2",
+    id: "zara-2",
     storeSlug: "zara",
     questionText: "Quel est le groupe propriétaire de ZARA ?",
     options: ["H&M Group", "Inditex", "LVMH", "Kering"],
     correctIndex: 1,
     explanation:
       "ZARA appartient au groupe Inditex, le plus grand détaillant de mode au monde.",
-    xpReward: 50,
+    xpReward: XP_PER_QUESTION,
   },
   {
-    id: "q3",
+    id: "zara-3", // placeholder
+    storeSlug: "zara",
+    questionText: "Qu'est-ce qui distingue le modèle de ZARA dans la mode ?",
+    options: [
+      "La vente exclusivement en ligne",
+      "Le renouvellement très rapide des collections",
+      "La production artisanale",
+      "Les collections annuelles uniques",
+    ],
+    correctIndex: 1,
+    explanation:
+      "ZARA a bâti sa réputation sur la « fast fashion » : de nouvelles pièces arrivent en boutique toutes les deux semaines.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── FLO ──
+  {
+    id: "flo-1",
+    storeSlug: "flo",
+    questionText: "Quel type de produits FLO propose-t-elle principalement ?",
+    options: [
+      "Vêtements de sport",
+      "Chaussures et accessoires",
+      "Cosmétiques",
+      "Électronique",
+    ],
+    correctIndex: 1,
+    explanation:
+      "FLO est spécialisée dans les chaussures et accessoires de mode.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "flo-2", // placeholder
+    storeSlug: "flo",
+    questionText: "De quel pays l'enseigne FLO est-elle originaire ?",
+    options: ["Turquie", "Grèce", "Italie", "Maroc"],
+    correctIndex: 0,
+    explanation:
+      "FLO est une enseigne turque de chaussures, présente dans de nombreux pays.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "flo-3", // placeholder
+    storeSlug: "flo",
+    questionText: "À quelle clientèle FLO s'adresse-t-elle ?",
+    options: [
+      "Uniquement aux femmes",
+      "Uniquement aux enfants",
+      "Toute la famille",
+      "Uniquement aux sportifs",
+    ],
+    correctIndex: 2,
+    explanation:
+      "FLO propose des collections pour femme, homme et enfant.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── GUESS ──
+  {
+    id: "guess-1",
+    storeSlug: "guess",
+    questionText: "Dans quel pays GUESS a-t-elle été fondée ?",
+    options: ["France", "Italie", "États-Unis", "Royaume-Uni"],
+    correctIndex: 2,
+    explanation:
+      "GUESS a été fondée en 1981 à Los Angeles par les frères Marciano.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "guess-2", // placeholder
+    storeSlug: "guess",
+    questionText: "Quel produit a lancé la notoriété de GUESS ?",
+    options: ["Le denim", "Le parfum", "Les montres", "Les lunettes"],
+    correctIndex: 0,
+    explanation:
+      "GUESS s'est fait connaître avec ses jeans, notamment le modèle Marilyn à trois zips.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "guess-3", // placeholder
+    storeSlug: "guess",
+    questionText: "Quel symbole figure sur le logo de GUESS ?",
+    options: [
+      "Une étoile",
+      "Un point d'interrogation",
+      "Une couronne",
+      "Un aigle",
+    ],
+    correctIndex: 1,
+    explanation:
+      "Le point d'interrogation rouge est l'emblème historique de la marque.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── BIRKENSTOCK ──
+  {
+    id: "birkenstock-1",
+    storeSlug: "birkenstock",
+    questionText:
+      "Depuis quelle année BIRKENSTOCK fabrique-t-elle des chaussures ?",
+    options: ["1774", "1850", "1920", "1960"],
+    correctIndex: 0,
+    explanation:
+      "L'histoire de BIRKENSTOCK remonte à 1774, ce qui en fait l'une des plus anciennes marques de chaussures au monde.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "birkenstock-2", // placeholder
+    storeSlug: "birkenstock",
+    questionText: "De quel pays BIRKENSTOCK est-elle originaire ?",
+    options: ["Autriche", "Suisse", "Allemagne", "Pays-Bas"],
+    correctIndex: 2,
+    explanation: "BIRKENSTOCK est une maison allemande.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "birkenstock-3", // placeholder
+    storeSlug: "birkenstock",
+    questionText: "Quelle innovation a fait la réputation de BIRKENSTOCK ?",
+    options: [
+      "La semelle anatomique",
+      "Le lacet élastique",
+      "La semelle transparente",
+      "Le talon compensé",
+    ],
+    correctIndex: 0,
+    explanation:
+      "La marque doit sa notoriété à sa semelle épousant la forme du pied, conçue dès 1896.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── MANGO ──
+  {
+    id: "mango-1",
+    storeSlug: "mango",
+    questionText: "Dans quelle ville MANGO a-t-elle son siège social ?",
+    options: ["Madrid", "Barcelone", "Paris", "Milan"],
+    correctIndex: 1,
+    explanation:
+      "MANGO a été fondée et a son siège à Barcelone, en Espagne.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "mango-2", // placeholder
+    storeSlug: "mango",
+    questionText: "En quelle décennie MANGO a-t-elle ouvert sa première boutique ?",
+    options: ["Années 1960", "Années 1980", "Années 1990", "Années 2000"],
+    correctIndex: 1,
+    explanation:
+      "La première boutique MANGO a ouvert sur le Paseo de Gracia à Barcelone en 1984.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "mango-3", // placeholder
+    storeSlug: "mango",
+    questionText: "Quel style caractérise les collections MANGO ?",
+    options: [
+      "Le sportswear technique",
+      "Le vestiaire méditerranéen et urbain",
+      "Le vêtement de travail",
+      "La haute couture",
+    ],
+    correctIndex: 1,
+    explanation:
+      "MANGO revendique une esthétique méditerranéenne, urbaine et portable au quotidien.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── SEPHORA ──
+  {
+    id: "sephora-1",
     storeSlug: "sephora",
     questionText: "Dans quel pays SEPHORA a-t-elle été créée ?",
     options: ["États-Unis", "Italie", "France", "Espagne"],
     correctIndex: 2,
     explanation:
       "SEPHORA a été fondée en France en 1970 par Dominique Mandonnaud.",
-    xpReward: 50,
+    xpReward: XP_PER_QUESTION,
   },
   {
-    id: "q4",
+    id: "sephora-2",
     storeSlug: "sephora",
     questionText:
       "Quel concept SEPHORA a-t-elle popularisé dans l'industrie de la beauté ?",
@@ -45,80 +229,52 @@ export const QUESTIONS: Question[] = [
     correctIndex: 1,
     explanation:
       "SEPHORA a révolutionné la beauté en permettant aux clients de tester librement les produits en magasin.",
-    xpReward: 50,
+    xpReward: XP_PER_QUESTION,
   },
   {
-    id: "q5",
+    id: "sephora-3", // placeholder
+    storeSlug: "sephora",
+    questionText: "À quel groupe de luxe SEPHORA appartient-elle ?",
+    options: ["Kering", "LVMH", "Richemont", "L'Oréal"],
+    correctIndex: 1,
+    explanation: "SEPHORA a rejoint le groupe LVMH en 1997.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── NIKE ──
+  {
+    id: "nike-1",
     storeSlug: "nike",
     questionText: "Que signifie le nom « Nike » ?",
-    options: [
-      "Force",
-      "Vitesse",
-      "Déesse grecque de la victoire",
-      "Champion",
-    ],
+    options: ["Force", "Vitesse", "Déesse grecque de la victoire", "Champion"],
     correctIndex: 2,
     explanation:
       "Nike tire son nom de Niké, la déesse grecque de la victoire.",
-    xpReward: 50,
+    xpReward: XP_PER_QUESTION,
   },
   {
-    id: "q6",
+    id: "nike-2",
     storeSlug: "nike",
     questionText: "Quel est le slogan emblématique de Nike ?",
     options: ["Just Do It", "Impossible Is Nothing", "Run Fast", "Be Strong"],
     correctIndex: 0,
-    explanation:
-      "« Just Do It » est le slogan iconique de Nike depuis 1988.",
-    xpReward: 50,
+    explanation: "« Just Do It » est le slogan iconique de Nike depuis 1988.",
+    xpReward: XP_PER_QUESTION,
   },
   {
-    id: "q7",
-    storeSlug: "mango",
-    questionText: "Dans quelle ville MANGO a-t-elle son siège social ?",
-    options: ["Madrid", "Barcelone", "Paris", "Milan"],
-    correctIndex: 1,
-    explanation:
-      "MANGO a été fondée et a son siège à Barcelone, en Espagne.",
-    xpReward: 50,
-  },
-  {
-    id: "q8",
-    storeSlug: "guess",
-    questionText: "Dans quel pays GUESS a-t-elle été fondée ?",
-    options: ["France", "Italie", "États-Unis", "Royaume-Uni"],
-    correctIndex: 2,
-    explanation:
-      "GUESS a été fondée en 1981 à Los Angeles par les frères Marciano.",
-    xpReward: 50,
-  },
-  {
-    id: "q9",
-    storeSlug: "flo",
-    questionText: "Quel type de produits FLO propose-t-elle principalement ?",
-    options: [
-      "Vêtements de sport",
-      "Chaussures et accessoires",
-      "Cosmétiques",
-      "Électronique",
-    ],
-    correctIndex: 1,
-    explanation:
-      "FLO est spécialisée dans les chaussures et accessoires de mode.",
-    xpReward: 50,
-  },
-  {
-    id: "q10",
-    storeSlug: "birkenstock",
-    questionText: "Depuis quelle année BIRKENSTOCK fabrique-t-elle des chaussures ?",
-    options: ["1774", "1850", "1920", "1960"],
+    id: "nike-3", // placeholder
+    storeSlug: "nike",
+    questionText: "Comment s'appelle le logo de Nike ?",
+    options: ["Le Swoosh", "Le Jumpman", "Le Flash", "L'Arc"],
     correctIndex: 0,
     explanation:
-      "L'histoire de BIRKENSTOCK remonte à 1774, ce qui en fait l'une des plus anciennes marques de chaussures au monde.",
-    xpReward: 50,
+      "La virgule de Nike s'appelle le Swoosh, dessinée en 1971 par Carolyn Davidson.",
+    xpReward: XP_PER_QUESTION,
   },
+
+  // ── PAUL ──
   {
-    id: "q11",
+    id: "paul-1",
     storeSlug: "paul",
     questionText: "Quel est le produit signature de PAUL ?",
     options: [
@@ -130,16 +286,119 @@ export const QUESTIONS: Question[] = [
     correctIndex: 1,
     explanation:
       "PAUL est avant tout célèbre pour son pain de tradition française, fabriqué de manière artisanale.",
-    xpReward: 50,
+    xpReward: XP_PER_QUESTION,
   },
   {
-    id: "q12",
+    id: "paul-2",
     storeSlug: "paul",
     questionText: "En quelle année la maison PAUL a-t-elle été fondée ?",
     options: ["1889", "1921", "1950", "1975"],
     correctIndex: 0,
     explanation:
       "La maison PAUL a été fondée en 1889 par Charlemagne Mayot dans le nord de la France.",
-    xpReward: 50,
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "paul-3", // placeholder
+    storeSlug: "paul",
+    questionText: "De quelle région française la maison PAUL est-elle originaire ?",
+    options: ["La Provence", "Le Nord", "La Bretagne", "L'Alsace"],
+    correctIndex: 1,
+    explanation:
+      "PAUL est née à Croix, dans le Nord de la France.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── SPRINGFIELD ──
+  {
+    id: "springfield-1",
+    storeSlug: "springfield",
+    questionText: "De quel pays l'enseigne SPRINGFIELD est-elle originaire ?",
+    options: ["Italie", "Espagne", "Portugal", "France"],
+    correctIndex: 1,
+    explanation:
+      "SPRINGFIELD est une marque espagnole, née en 1988 et développée par le groupe Tendam.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "springfield-2",
+    storeSlug: "springfield",
+    questionText: "À quelle clientèle SPRINGFIELD s'adressait-elle à ses débuts ?",
+    options: ["Aux enfants", "Aux hommes", "Aux femmes", "Aux sportifs"],
+    correctIndex: 1,
+    explanation:
+      "SPRINGFIELD a démarré comme une marque de mode masculine avant d'ouvrir ses collections aux femmes.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "springfield-3", // placeholder
+    storeSlug: "springfield",
+    questionText: "Quel style définit le mieux SPRINGFIELD ?",
+    options: [
+      "La mode décontractée du quotidien",
+      "Le costume de cérémonie",
+      "Le vêtement technique de montagne",
+      "La haute couture",
+    ],
+    correctIndex: 0,
+    explanation:
+      "SPRINGFIELD s'est construite autour d'un vestiaire urbain et décontracté.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── WOMEN'SECRET ──
+  {
+    id: "womensecret-1",
+    storeSlug: "womensecret",
+    questionText: "Quelle est la spécialité de WOMEN'SECRET ?",
+    options: [
+      "La maroquinerie",
+      "La lingerie et les vêtements de nuit",
+      "Les chaussures de sport",
+      "La parfumerie",
+    ],
+    correctIndex: 1,
+    explanation:
+      "WOMEN'SECRET est dédiée à la lingerie, aux vêtements de nuit et au balnéaire pour femme.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "womensecret-2",
+    storeSlug: "womensecret",
+    questionText: "De quel pays WOMEN'SECRET est-elle originaire ?",
+    options: ["Espagne", "Royaume-Uni", "Belgique", "Turquie"],
+    correctIndex: 0,
+    explanation:
+      "WOMEN'SECRET est une enseigne espagnole, créée en 1993 et rattachée au groupe Tendam.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "womensecret-3", // placeholder
+    storeSlug: "womensecret",
+    questionText:
+      "Quelle catégorie WOMEN'SECRET propose-t-elle en plus de la lingerie ?",
+    options: [
+      "Les maillots de bain",
+      "Les chaussures de ville",
+      "Les sacs de voyage",
+      "Les montres",
+    ],
+    correctIndex: 0,
+    explanation:
+      "Le balnéaire est l'une des collections phares de la marque, aux côtés de la nuit et de la lingerie.",
+    xpReward: XP_PER_QUESTION,
   },
 ];
+
+/**
+ * Questions grouped by store, built once at module load.
+ * The quiz drawer and the roster both need this lookup on every render —
+ * filtering the flat list each time would be needless work on the hot screen.
+ */
+export const QUESTIONS_BY_STORE: Record<string, Question[]> = QUESTIONS.reduce(
+  (acc, q) => {
+    (acc[q.storeSlug] ??= []).push(q);
+    return acc;
+  },
+  {} as Record<string, Question[]>
+);

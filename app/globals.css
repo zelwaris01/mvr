@@ -115,11 +115,12 @@
   color: var(--ink);
 }
 
-/* ── Base ── */
-html {
-  scroll-behavior: smooth;
-  /* Anchored jumps land below the 64px sticky header instead of under it */
-  scroll-padding-top: 5.5rem;
+/* ── Base ──
+   Nothing scrolls the document: the visit fills the viewport and every
+   surface floats above it. overscroll-behavior stops a horizontal rail from
+   rubber-banding the page or triggering the browser's back gesture. */
+html, body {
+  overscroll-behavior: none;
 }
 
 body {
@@ -165,29 +166,11 @@ body {
    SURFACES
    ══════════════════════════════════════════ */
 
-/* Hairline card — 1px border, near-invisible wash, 14px radius */
-.card {
-  border: 1px solid var(--line);
-  background: var(--card);
-  border-radius: 14px;
-  transition: border-color .22s ease, background-color .22s ease,
-              transform .22s cubic-bezier(.22,.61,.36,1);
-}
-
-/* Interactive card — warms to brass and lifts a single pixel-and-a-half on
-   hover. Any more reads as a bounce; this just acknowledges the cursor. */
-.card-link:hover {
-  border-color: var(--brass-line);
-  background: var(--brass-soft);
-  transform: translateY(-1.5px);
-}
-/* Pressing settles it back down — the click has somewhere to land */
-.card-link:active {
-  transform: translateY(0);
-  transition-duration: .08s;
-}
-
-/* Frosted overlay panel that floats above imagery */
+/* Frosted overlay panel.
+   Reserved for surfaces that do NOT sit over the moving panorama — blurring a
+   backdrop that repaints every frame forces a full readback and re-blur, and
+   on integrated GPUs that alone can eat the frame budget. Everything above the
+   live scene uses .pane instead. */
 .glass {
   background: color-mix(in srgb, var(--bg) 62%, transparent);
   border: 1px solid var(--line);
@@ -195,19 +178,10 @@ body {
   -webkit-backdrop-filter: blur(14px);
 }
 
-/* Image plate — the warm gradient behind photography and placeholders */
-.plate {
-  background: var(--plate);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Radial brass glow — drop into any relatively-positioned container */
-.brass-glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(75% 85% at 30% 28%, var(--glow), transparent 68%);
-  pointer-events: none;
+/* The HUD surface: same visual weight as .glass, no per-frame blur cost. */
+.pane {
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border: 1px solid var(--line);
 }
 
 /* ── Progress ring ──
@@ -226,20 +200,6 @@ body {
     var(--line) var(--ring-pct) 100%
   );
   transition: --ring-pct .9s cubic-bezier(.22,.61,.36,1);
-}
-
-/* Divided stat strip — cells separated by 1px of --line showing through */
-.strip {
-  display: grid;
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.strip > * {
-  background: var(--bg);
-  padding: 18px 20px;
 }
 
 /* ══════════════════════════════════════════
@@ -276,58 +236,6 @@ body {
 .btn-brass { background: var(--brass); color: var(--on-brass); }
 .btn-brass:hover { background: var(--fill); color: var(--on-fill); }
 
-/* Filter / segment pill */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  padding: 9px 16px;
-  font-size: 11.5px;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color .2s ease, color .2s ease, border-color .2s ease,
-              transform .12s ease;
-}
-.pill:active { transform: scale(.96); }
-.pill-on { background: var(--fill); color: var(--on-fill); border: 1px solid transparent; }
-.pill-off { border: 1px solid var(--line-strong); color: var(--ink-2); }
-.pill-off:hover { border-color: var(--brass-line); color: var(--brass); }
-
-/* Small uppercase chip that sits on a plate */
-.tag {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 5px 11px;
-  font-size: 9.5px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  background: color-mix(in srgb, var(--bg) 66%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: var(--brass);
-}
-
-/* Back link — "← Back to the atrium" */
-.backlink {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  transition: color .2s ease;
-}
-.backlink:hover { color: var(--brass); }
-
 /* ── Theme toggle icons ──
    Both glyphs are rendered; which one shows is decided by the data-theme
    attribute the blocking script sets in <head>. Doing this in CSS rather than
@@ -355,12 +263,6 @@ body {
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 
-/* Fades the right edge of a horizontal rail instead of cutting it */
-.rail-mask {
-  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
-  mask-image: linear-gradient(90deg, #000 88%, transparent);
-}
-
 /* ── Horizontal rail ──
    Everything that scrolls sideways. `proximity` snapping tidies a flick up
    against the nearest card without fighting a deliberate half-scroll the way
@@ -384,64 +286,156 @@ body {
 }
 .animate-scale-in { animation: scale-in 0.3s cubic-bezier(0.34, 1.4, 0.64, 1); }
 
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes slide-in-right {
+  from { transform: translate3d(101%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
 }
-.animate-fade-up { animation: fade-up 0.45s ease-out both; }
-
-@keyframes fill-bar {
-  from { width: 0; }
-}
-.animate-fill-bar { animation: fill-bar 0.8s ease-out both; }
 
 /* ══════════════════════════════════════════
-   SCROLL-LINKED MOTION
-   Driven by scroll position rather than a timer, so nothing animates unless
-   the reader is actually moving — and nothing is ever mid-flight when they
-   stop. Both blocks are wrapped in @supports: where scroll timelines are
-   unavailable (Safari, Firefox) the content simply renders in its finished
-   state. Nothing here is load-bearing for legibility.
+   THE VISIT
+   Layering over a live, cross-origin 3D scene. The ordering of
+   pointer-events here is the single most consequential thing in this file.
    ══════════════════════════════════════════ */
 
-@keyframes reveal-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* The panorama and every overlay share one containing block, so the marker
+   engine's screen coordinates land where it thinks they do. Do NOT add
+   padding or a border to .stage — either becomes a constant marker offset. */
+.stage {
+  position: fixed;
+  inset: 0;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--bg);
+}
+.stage-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* ── The HUD plane ──
+   pointer-events:none is the whole trick. The browser's hit-tester walks
+   straight through a transparent full-bleed layer, so every drag, wheel,
+   click and pinch that doesn't land on a control reaches the iframe genuinely
+   untouched — not forwarded, not synthesised. Children opt back in
+   individually. If this ever becomes `auto`, the visitor cannot look around
+   at all and the tour appears frozen. */
+.hud {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.hud-on { pointer-events: auto; }
+
+/* ── Checkpoint markers ── */
+.cp-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  /* A marker's transform can never invalidate page layout. */
+  contain: layout paint style;
+  transform: translateZ(0);
 }
 
-/* The header sits flush at the top of the page and only earns its hairline
-   and shadow once there is content scrolled underneath it. */
-@keyframes header-settle {
-  from { border-bottom-color: transparent; box-shadow: 0 0 0 rgba(0,0,0,0); }
-  to   { border-bottom-color: var(--line); box-shadow: 0 8px 26px -18px rgba(0,0,0,.7); }
+/* Centred with negative margins rather than translate(-50%,-50%): it keeps
+   the per-frame transform to a single translate3d() with no percentage to
+   resolve against the border box. */
+.cp {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 999px;
+  pointer-events: auto;
+  visibility: hidden;          /* the first engine tick reveals it */
+  will-change: transform;
+  contain: layout paint style;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  transition: opacity .2s linear;
+  /* No backdrop-filter: this sits over continuously repainting WebGL. */
+  background: radial-gradient(circle at 38% 32%, rgba(255,255,255,.34), transparent 55%),
+              linear-gradient(150deg, #d9b476, var(--brass));
+  box-shadow: 0 2px 10px rgba(0,0,0,.45), 0 0 0 1px rgba(11,10,9,.35);
+}
+.cp:hover { box-shadow: 0 2px 14px rgba(0,0,0,.5), 0 0 0 2px var(--brass-line); }
+
+/* The pulse lives on a child so the parent's transform stays purely
+   translational, and is pointer-events:none so its expanded 1.25x box
+   doesn't eat drags in a ring around the disc. */
+.cp-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 1px solid var(--brass-line);
+  pointer-events: none;
+  animation: cp-pulse 2.6s ease-out infinite;
+}
+@keyframes cp-pulse {
+  0%   { transform: scale(.86); opacity: .9; }
+  70%  { transform: scale(1.25); opacity: 0; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+/* A checkpoint already answered stops advertising itself. */
+.cp-done { background: linear-gradient(150deg, #7cae86, var(--jade)); }
+.cp-done .cp-ring { animation: none; opacity: .35; }
+
+/* ── Quiz drawer ──
+   No scrim, deliberately: a backdrop is exactly what would kill "la visite
+   reste active". The slot is a positioning wrapper only. */
+.drawer-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 92vw);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* Scrolling to the end of the panel must not chain to the page or fire the
+     trackpad back-swipe. This is the only gesture handling in the overlay —
+     no stopPropagation, no preventDefault anywhere. */
+  overscroll-behavior: contain;
+  background: linear-gradient(90deg, rgba(11,10,9,.72), rgba(11,10,9,.95) 22%);
+  border-left: 1px solid var(--line);
+  animation: slide-in-right .32s cubic-bezier(.22,.61,.36,1) both;
+}
+[data-theme="light"] .drawer {
+  background: linear-gradient(90deg, rgba(236,233,226,.80), rgba(255,255,255,.97) 22%);
 }
 
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    /* A section lifts into place as it enters. The range is a fixed 180px
-       rather than a percentage: a percentage of `entry` is measured against
-       the element's own height, so the tall store grid would still be
-       half-faded several screens later. A fixed distance means every section
-       settles after the same short scroll, whatever its size. */
-    .reveal {
-      animation: reveal-in linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 180px;
-    }
-
-    .site-header {
-      animation: header-settle linear both;
-      animation-timeline: scroll(root block);
-      animation-range: 0 80px;
-    }
-  }
+/* Flight progress — a hairline sweeping the top of the stage, not a spinner. */
+.flight-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  z-index: 15;
+  pointer-events: none;
+  background: var(--brass);
+  transform-origin: left center;
+  animation: flight-sweep var(--flight-ms, 1600ms) linear both;
+}
+@keyframes flight-sweep {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-scale-in,
-  .animate-fade-up,
-  .animate-fill-bar { animation: none; }
+  .animate-scale-in { animation: none; }
   * { transition-duration: 0.01ms !important; }
-  /* Smooth scrolling is motion too — let the browser jump instead */
-  html { scroll-behavior: auto; }
+  .cp-ring { animation: none; }
+  .cp { opacity: 1 !important; }
+  .flight-bar { animation: none; transform: scaleX(1); }
+  .drawer { animation: none; }
 }

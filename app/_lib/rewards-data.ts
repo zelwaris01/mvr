@@ -1,4 +1,4 @@
-import type { Badge, Reward } from "./types";
+import type { Badge } from "./types";
 
 export const BADGES: Badge[] = [
   {
@@ -45,37 +45,3 @@ export const BADGES: Badge[] = [
   },
 ];
 
-export const REWARDS: Reward[] = [
-  {
-    id: "r1",
-    title: "Bon de réduction",
-    description: "Valable sur votre prochain achat dans le mall",
-    discount: "-10%",
-    storeName: "Mall Quest",
-    requiredXp: 50,
-  },
-  {
-    id: "r2",
-    title: "Réduction Mode",
-    description: "Applicable dans les boutiques de mode du mall",
-    discount: "-15%",
-    storeName: "Boutiques Mode",
-    requiredXp: 150,
-  },
-  {
-    id: "r3",
-    title: "Offre Beauté",
-    description: "Réduction exclusive beauté et cosmétiques",
-    discount: "-20%",
-    storeName: "SEPHORA",
-    requiredXp: 300,
-  },
-  {
-    id: "r4",
-    title: "Super Réduction",
-    description: "La récompense ultime pour les champions du mall",
-    discount: "-25%",
-    storeName: "Tout le Mall",
-    requiredXp: 500,
-  },
-];

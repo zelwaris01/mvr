@@ -2,8 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Archivo, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { GameStateProvider } from "@/app/_components/GameStateProvider";
-import { Header } from "@/app/_components/Header";
-import { BottomNav } from "@/app/_components/BottomNav";
 
 const archivo = Archivo({
   variable: "--font-body",
@@ -21,9 +19,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Smart Mall — Digital Experience",
+  title: "Meridian — Anfa Place",
   description:
-    "Explorez le mall virtuel, découvrez les boutiques, répondez aux quiz et gagnez des récompenses !",
+    "Explorez le mall en visite 360°, repérez les boutiques et répondez à leurs quiz pour gagner des récompenses.",
 };
 
 export const viewport: Viewport = {
@@ -44,18 +42,16 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${archivo.variable} ${instrumentSerif.variable} h-full antialiased`}
+      className={`${archivo.variable} ${instrumentSerif.variable} antialiased`}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full flex flex-col bg-bg text-ink">
-        <GameStateProvider>
-          <Header />
-          <main className="flex-1 pb-20 md:pb-0">{children}</main>
-          <BottomNav />
-        </GameStateProvider>
+      {/* The visit fills the viewport and nothing scrolls the document —
+          every surface is a floating overlay above the panorama. */}
+      <body className="h-dvh overflow-hidden bg-bg text-ink">
+        <GameStateProvider>{children}</GameStateProvider>
       </body>
     </html>
   );

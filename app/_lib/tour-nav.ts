@@ -2,8 +2,14 @@ import type { MpSdk } from "@matterport/sdk";
 
 export type Vec3 = { x: number; y: number; z: number };
 
-/** How far from a pin we'll still accept a sweep as "the spot in front of it". */
-const MAX_SWEEP_DISTANCE_M = 9;
+/** Ideal: a sweep this close is unambiguously "in front of" the pin. */
+const MAX_SWEEP_DISTANCE_M = 15;
+/**
+ * Last resort. Beyond the ideal range we still travel rather than refuse —
+ * landing roughly right beats a checkpoint that silently does nothing when
+ * clicked, which is how this failed for Chocorico and Summer Market.
+ */
+const FALLBACK_DISTANCE_M = 35;
 
 export function distanceSq(a: Vec3, b: Vec3): number {
   const dx = a.x - b.x;
@@ -15,31 +21,37 @@ export function distanceSq(a: Vec3, b: Vec3): number {
 /**
  * How much a metre of height counts against a metre of ground distance.
  *
- * `TagData` carries no floor number — only `roomId`, which lives in a
- * different id namespace from `Sweep.floorInfo` — so a floor filter isn't
- * available. Weighting the vertical axis achieves the same thing
- * geometrically: the sweep directly below a first-floor storefront is ~4 m
- * down, which at this weight scores as ~16 m and loses to any same-level
- * sweep within reach. Without it, clicking a brand can teleport you a floor
- * away, which reads as a total malfunction.
+ * This used to be 4, to stop a first-floor pin resolving to the sweep
+ * directly beneath it on the ground floor. That risk no longer exists: the
+ * mall's levels are separate Matterport scans, so a single space only ever
+ * contains one storey and there is nothing below to fall through to.
+ *
+ * Left at 4 it did real damage. Pins float above head height, so a couple of
+ * metres of stem became eight metres of penalty against a nine-metre budget —
+ * enough to reject every candidate and leave the pin unreachable. A mild
+ * weight still prefers a sweep on the shop's own level if a scan ever does
+ * contain two.
  */
-const VERTICAL_PENALTY = 4;
+const VERTICAL_PENALTY = 1.5;
 
 /**
  * The walkable spot nearest a pin.
  *
  * The SDK has no such helper — `Sweep.data` is a flat dictionary and nothing
- * relates a tag to a standing position. Two constraints keep the answer sane:
- * the vertical weighting above, and a distance cap — straight-line distance is
- * not walkable distance, so past a few metres "nearest" stops meaning
- * anything. Returning null is better than flying somewhere wrong: the caller
- * simply skips the flight and opens the quiz where the visitor already stands.
+ * relates a tag to a standing position.
+ *
+ * Two passes, because refusing to travel is the worst outcome: prefer a sweep
+ * within the ideal radius, but rather than give up, accept the nearest one
+ * within the fallback radius. A checkpoint that lands you approximately right
+ * is honest; one that appears clickable and then does nothing is not.
  */
 export function nearestSweep(
   target: Vec3,
   sweeps: Iterable<MpSdk.Sweep.ObservableSweepData>
 ): MpSdk.Sweep.ObservableSweepData | null {
-  const maxSq = MAX_SWEEP_DISTANCE_M * MAX_SWEEP_DISTANCE_M;
+  const idealSq = MAX_SWEEP_DISTANCE_M * MAX_SWEEP_DISTANCE_M;
+  const fallbackSq = FALLBACK_DISTANCE_M * FALLBACK_DISTANCE_M;
+
   let best: MpSdk.Sweep.ObservableSweepData | null = null;
   let bestScore = Infinity;
 
@@ -51,12 +63,95 @@ export function nearestSweep(
     const dz = target.z - sweep.position.z;
     const score = dx * dx + dy * dy + dz * dz;
 
-    if (score < bestScore && score <= maxSq) {
+    if (score < bestScore) {
       bestScore = score;
       best = sweep;
     }
   }
-  return best;
+
+  if (!best) return null;
+  if (bestScore <= idealSq) return best;
+  return bestScore <= fallbackSq ? best : null;
+}
+
+/** How far out in front of a shopfront we'd ideally stand, in metres. */
+const VIEWING_DISTANCE_M = 3.5;
+
+/**
+ * The spot to stand in to look at a shopfront.
+ *
+ * Picking the sweep nearest the shop itself sounds right and isn't: the
+ * nearest sweep to a point on the glass can easily be off to one side, or
+ * even inside the shop, and you arrive facing along the window rather than
+ * into it. The pin's stem points straight out from the surface, so stepping
+ * that way first gives a target out in the walkway, square to the storefront.
+ *
+ * Falls back to the anchor when the stem is missing or degenerate, which is
+ * no worse than the old behaviour.
+ */
+export function viewpointFor(anchor: Vec3, stem: Vec3): Vec3 {
+  const length = Math.hypot(stem.x, stem.y, stem.z);
+  if (!Number.isFinite(length) || length < 0.01) return anchor;
+
+  const scale = VIEWING_DISTANCE_M / length;
+  return {
+    x: anchor.x + stem.x * scale,
+    // Stay at standing height: the stem often points upward off a fascia,
+    // and following it vertically would aim for a spot in mid-air.
+    y: anchor.y,
+    z: anchor.z + stem.z * scale,
+  };
+}
+
+/**
+ * Turns the camera until `target` is centred on screen.
+ *
+ * Every previous attempt here computed a heading from trigonometry and hoped
+ * Matterport's yaw convention matched — which is how clicking Women'Secret
+ * ended up framing Springfield. The convention is undocumented, and guessing
+ * its sign is a coin flip that stays wrong until someone notices.
+ *
+ * This asks the question the other way round: project the target with the
+ * SDK's own `worldToScreen`, see how far off centre it lands, and rotate to
+ * close the gap. The sign is discovered rather than assumed — if the first
+ * nudge makes things worse, the direction flips and the loop carries on. A
+ * couple of iterations settle it, and it is correct for any model.
+ */
+export async function aimAt(
+  sdk: MpSdk,
+  target: Vec3,
+  size: { w: number; h: number }
+): Promise<void> {
+  if (size.w === 0 || size.h === 0) return;
+
+  const APPROX_HFOV_DEG = 65; // only sets the step size; the loop corrects it
+  const TOLERANCE = size.w * 0.035;
+  const scratch = { x: 0, y: 0, z: 0 };
+
+  let direction = 1;
+  let previousError = Infinity;
+
+  for (let i = 0; i < 5; i++) {
+    const pose = await sdk.Camera.pose.waitUntil(() => true);
+    sdk.Conversion.worldToScreen(target, pose, size, scratch);
+
+    // Behind the camera: no meaningful screen error to read, so swing round
+    // and re-measure rather than chasing a mirrored coordinate.
+    if (!(scratch.z > 0 && scratch.z < 1)) {
+      await sdk.Camera.rotate(90 * direction, 0, { speed: 220 });
+      continue;
+    }
+
+    const error = scratch.x - size.w / 2;
+    if (Math.abs(error) <= TOLERANCE) return;
+
+    // Got worse after a turn? The convention runs the other way.
+    if (Math.abs(error) > Math.abs(previousError)) direction = -direction;
+    previousError = error;
+
+    const degrees = (error / size.w) * APPROX_HFOV_DEG * direction;
+    await sdk.Camera.rotate(degrees, 0, { speed: 220 });
+  }
 }
 
 /**

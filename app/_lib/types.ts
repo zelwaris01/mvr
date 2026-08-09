@@ -12,6 +12,8 @@ export interface Store {
   category: string;
   /** Shown in the quiz drawer as "DÉBLOQUE — {reward}". */
   reward: string;
+  /** Thumbnail for the brand rail. Decorative only — never load-bearing. */
+  image: string;
 }
 
 // ---- Quiz ----

@@ -1,5 +1,23 @@
-/** The Matterport space id — the `m=` parameter of the showcase URL. */
-export const MATTERPORT_SPACE_ID = "iGiPWMPBMdw";
+/**
+ * The mall's levels.
+ *
+ * Anfa Place is not one multi-storey Matterport model — it is two separate
+ * scans, one per level, each with its own space id, its own sweeps and its
+ * own pins. That is why `Floor.data` reports a single floor however hard you
+ * ask it: from inside a space, the other level does not exist.
+ *
+ * So switching level means loading a different model and reconnecting the
+ * SDK, not calling `Floor.moveTo`. Add a scan here and it becomes a level.
+ */
+export type MallLevel = { id: string; short: string; label: string };
+
+export const MATTERPORT_LEVELS: MallLevel[] = [
+  { id: "iGiPWMPBMdw", short: "N0", label: "Rez-de-chaussée" },
+  { id: "UjnosRzGqQH", short: "N1", label: "Premier étage" },
+];
+
+/** The space loaded on arrival. */
+export const MATTERPORT_SPACE_ID = MATTERPORT_LEVELS[0].id;
 
 /**
  * Showcase SDK key. Public by necessity: the SDK connects from the browser, so
@@ -11,20 +29,73 @@ export const MATTERPORT_SPACE_ID = "iGiPWMPBMdw";
 export const MATTERPORT_SDK_KEY =
   process.env.NEXT_PUBLIC_MATTERPORT_SDK_KEY ?? "";
 
-/** Keyless embed — no SDK, no events. The fallback when no key is configured. */
-export const MATTERPORT_URL = `https://my.matterport.com/show/?m=${MATTERPORT_SPACE_ID}&play=1`;
+/**
+ * Showcase URL parameters that strip Matterport's own chrome.
+ *
+ * These MUST live on the iframe's `src`. `setupSdk`'s `iframeQueryParams`
+ * looks like the tidier home for them, but that path never runs here — the
+ * npm loader fails under Turbopack and we connect via the hosted bootstrap
+ * instead, which attaches to whatever URL the iframe already has. Params set
+ * through `setupSdk` were silently doing nothing.
+ *
+ * The player is a cross-origin iframe: its UI cannot be restyled, moved or
+ * hidden with CSS from out here. Asking it not to draw is the only lever, and
+ * anything it draws anyway has to be replaced by our own HUD.
+ *
+ * `dh=0` / `f=0` hide the dollhouse and floorplan buttons — the view-mode
+ * cluster at the bottom. They may also disable the modes themselves, which
+ * the MAP button uses. That is handled rather than avoided: `toggleMap` tries
+ * dollhouse, falls back to floorplan, and permanently hides its own button if
+ * both reject. So the worst case is losing MAP, not a broken control.
+ */
+const SHOWCASE_PARAMS: Record<string, string | number> = {
+  play: 1, // start walking immediately
+  qs: 1, // quickstart, no splash
+  brand: 0, // no branding badge
+  help: 0, // no help button
+  hl: 0, // no highlight reel (the play / next arrows)
+  gt: 0, // no guided-tour controls
+  tourcta: 0, // no call-to-action bubble
+  title: 0, // no model title
+  // `mt: 0` is deliberately NOT set. It hides native pins, but it also stops
+  // Matterport reporting them through Tag.data — which silently cost us every
+  // pin in the model except the two that happened to arrive first. Pins are
+  // suppressed individually instead (enabled = false + allowAction + close),
+  // which hides them just as well and keeps their positions available.
+  vr: 0, // no VR button
+  hr: 0, // no highlight reel (older alias; harmless if ignored)
+  lang: "fr",
+  // Removed on purpose — each of these restricts what the model exposes, not
+  // just what it draws, and `mt: 0` already cost us most of the pins once:
+  //   dh: 0  / f: 0   may disable dollhouse and floorplan outright. `f` is as
+  //                   likely to mean "floors" as "floorplan", which would
+  //                   explain the SDK reporting a single storey.
+  //   mls: 2          real-estate compliance mode; scope is undocumented.
+  // Chrome they were hiding is covered by .chrome-mask instead, which is
+  // cosmetic and cannot break the model.
+};
+
+const showcaseQuery = Object.entries(SHOWCASE_PARAMS)
+  .map(([k, v]) => `${k}=${v}`)
+  .join("&");
 
 /**
- * The interactive tour's embed URL.
+ * The embed URL for a level.
  *
  * The key has to be on the iframe's `src` from the very first load. Setting a
  * keyless src and letting the SDK rewrite it afterwards loses the race —
  * Showcase boots without a key and rejects the later connection with
  * NO_APPLICATION_KEY_SUPPLIED.
  */
-export const MATTERPORT_TOUR_URL = MATTERPORT_SDK_KEY
-  ? `${MATTERPORT_URL}&applicationKey=${MATTERPORT_SDK_KEY}`
-  : MATTERPORT_URL;
+export function tourUrlFor(spaceId: string): string {
+  const base = `https://my.matterport.com/show/?m=${spaceId}&${showcaseQuery}`;
+  return MATTERPORT_SDK_KEY
+    ? `${base}&applicationKey=${MATTERPORT_SDK_KEY}`
+    : base;
+}
+
+/** The ground floor's embed URL — the level loaded on arrival. */
+export const MATTERPORT_TOUR_URL = tourUrlFor(MATTERPORT_SPACE_ID);
 
 /**
  * Bumped from `mallquest_progress` when question ids moved to `${slug}-${n}`

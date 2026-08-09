@@ -39,8 +39,11 @@
   color-scheme: dark;
 }
 
+/* ── Light theme — ivory gallery, deep ink, antique gold ──
+   Currently unreachable: the toggle was removed and nothing sets data-theme,
+   so the visit is dark-only. Kept intact because re-enabling it is a matter
+   of restoring one button, and the palette is the expensive part. */
 [data-theme="light"] {
-  /* ── Light theme — ivory gallery, deep ink, antique gold ── */
   --bg:          #ece9e2;
   --surface-1:   #ffffff;
   --surface-2:   #f4f0e9;
@@ -236,16 +239,22 @@ body {
 .btn-brass { background: var(--brass); color: var(--on-brass); }
 .btn-brass:hover { background: var(--fill); color: var(--on-fill); }
 
-/* ── Theme toggle icons ──
-   Both glyphs are rendered; which one shows is decided by the data-theme
-   attribute the blocking script sets in <head>. Doing this in CSS rather than
-   in React means the correct icon is painted on the first frame instead of
-   flipping once the client hydrates. The button offers the theme you'd move
-   *to*: sun while dark, moon while light. */
-.theme-icon-sun  { display: block; }
-.theme-icon-moon { display: none; }
-[data-theme="light"] .theme-icon-sun  { display: none; }
-[data-theme="light"] .theme-icon-moon { display: block; }
+/* ── Pointer affordance ──
+   Anything that responds to a click says so. Tailwind doesn't apply this by
+   default and `<button>` doesn't carry it natively, so it has to be stated
+   once here rather than remembered on every control. */
+button:not(:disabled),
+a[href],
+[role="button"],
+summary,
+select,
+.cp-plate {
+  cursor: pointer;
+}
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
 
 /* ── Focus ring ── */
 :focus-visible {
@@ -309,6 +318,128 @@ body {
 }
 .stage-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
+/* ── Chrome mask ──
+   Matterport's control bar lives inside a cross-origin iframe: it cannot be
+   restyled, repositioned or hidden with CSS, the SDK exposes no toggle for it,
+   and the URL params that were supposed to remove it don't cover every button.
+   So it gets covered instead.
+   `pointer-events: auto` is the point — a purely visual scrim would hide the
+   buttons while leaving them clickable, which is worse than not hiding them.
+   This costs the bottom ~104px as a click-to-walk surface; the brand rail
+   already occupied that strip, and walking clicks land on floor further ahead. */
+.chrome-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 104px;
+  z-index: 5;                /* above the iframe, below the HUD */
+  pointer-events: auto;
+  background: linear-gradient(
+    to top,
+    var(--bg) 0%,
+    var(--bg) 52%,
+    color-mix(in srgb, var(--bg) 70%, transparent) 78%,
+    transparent 100%
+  );
+}
+
+/* Top-left corner: the Matterport wordmark. Same reasoning as the bottom
+   deck, and `pointer-events: auto` matters twice as much here — that logo is
+   a link out to matterport.com, so a purely visual cover would leave a
+   invisible trapdoor off the site. The diagonal fade keeps it reading as a
+   vignette rather than a patch. */
+.chrome-mask-tl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 88px;
+  z-index: 5;
+  pointer-events: auto;
+  background: linear-gradient(
+    118deg,
+    var(--bg) 0%,
+    var(--bg) 44%,
+    color-mix(in srgb, var(--bg) 62%, transparent) 70%,
+    transparent 100%
+  );
+}
+
+/* ── Loading veil ──
+   Sits above the iframe and above the chrome mask, below nothing. The player's
+   own loading screen carries Matterport's logo and name, and a cross-origin
+   iframe can't be restyled, so the only way to keep the first impression ours
+   is to cover theirs entirely until the model is walkable. */
+.tour-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+}
+/* The ground is a pseudo-element rather than the veil's own background, so it
+   can fade independently while the wordmark stays fully opaque on its way up.
+   Fading the veil as a whole would dissolve the mark mid-flight. */
+.tour-veil::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  transition: opacity .55s ease;
+}
+.tour-veil-out { pointer-events: none; }
+.tour-veil-out::before { opacity: 0; }
+
+.veil-mark {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+/* The hand-off: the wordmark flies from the centre of the screen to exactly
+   where TourTopBar's copy sits, shrinking 34px -> 26px on the way. The real
+   one fades in underneath as this lands, so the swap is invisible. */
+.tour-veil-out .veil-mark {
+  animation: mark-fly .7s cubic-bezier(.7, 0, .2, 1) forwards;
+}
+@keyframes mark-fly {
+  to { transform: translateY(calc(-50dvh + 42px)) scale(.765); }
+}
+
+.veil-bar {
+  margin-top: 14px;
+  width: 132px;
+  height: 1px;
+  background: var(--line);
+  position: relative;
+  overflow: hidden;
+  transition: opacity .25s ease;
+}
+.tour-veil-out .veil-bar { opacity: 0; }
+.veil-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--brass);
+  transform-origin: left center;
+  animation: veil-sweep 1.5s ease-in-out infinite;
+}
+@keyframes veil-sweep {
+  0%   { transform: scaleX(0); opacity: 1; }
+  60%  { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+
+/* The real wordmark waits until the flying one has landed on it. */
+.mark-hidden { opacity: 0; }
+.mark-shown { opacity: 1; transition: opacity .3s ease .12s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-veil-out .veil-mark { animation: none; opacity: 0; transition: opacity .2s; }
+}
+
 /* ── The HUD plane ──
    pointer-events:none is the whole trick. The browser's hit-tester walks
    straight through a transparent full-bleed layer, so every drag, wheel,
@@ -335,54 +466,187 @@ body {
   transform: translateZ(0);
 }
 
-/* Centred with negative margins rather than translate(-50%,-50%): it keeps
-   the per-frame transform to a single translate3d() with no percentage to
-   resolve against the border box. */
+/* ── A checkpoint ──
+   Three nested elements, each with exactly one job, so the engine's per-frame
+   write stays a single translate3d and everything else is compositor-only CSS:
+     .cp        zero-size anchor — the ONLY thing the engine touches
+     .cp-anchor static centring
+     .cp-body   the bob, so the anchor's transform is never animated
+
+   A flat disc reads as decoration. This reads as an objective: a glyph that
+   says "there is something to answer here", a name plate saying which shop and
+   what it pays, and motion in the periphery so you register it while walking
+   rather than after studying the screen. */
 .cp {
   position: absolute;
   top: 0;
   left: 0;
-  width: 44px;
-  height: 44px;
-  margin: -22px 0 0 -22px;
-  border-radius: 999px;
-  pointer-events: auto;
+  width: 0;
+  height: 0;
   visibility: hidden;          /* the first engine tick reveals it */
   will-change: transform;
-  contain: layout paint style;
-  touch-action: manipulation;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  transition: opacity .2s linear;
+}
+.cp-anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  pointer-events: none;        /* only the badge and plate opt back in */
+}
+.cp-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  animation: cp-bob 3.4s ease-in-out infinite;
+}
+@keyframes cp-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+
+/* The badge — brass coin with a serif "?" */
+.cp-badge {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
   cursor: pointer;
   border: 0;
   padding: 0;
-  transition: opacity .2s linear;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   /* No backdrop-filter: this sits over continuously repainting WebGL. */
-  background: radial-gradient(circle at 38% 32%, rgba(255,255,255,.34), transparent 55%),
-              linear-gradient(150deg, #d9b476, var(--brass));
-  box-shadow: 0 2px 10px rgba(0,0,0,.45), 0 0 0 1px rgba(11,10,9,.35);
+  background: radial-gradient(circle at 36% 30%, rgba(255,255,255,.55), transparent 58%),
+              linear-gradient(155deg, #e8c98d, var(--brass) 55%, #8a6a34);
+  box-shadow:
+    0 0 0 1.5px rgba(17,14,9,.55),
+    0 0 0 4px rgba(176,141,87,.22),
+    0 6px 18px rgba(0,0,0,.5);
+  transition: transform .18s cubic-bezier(.34,1.4,.64,1), box-shadow .18s ease;
 }
-.cp:hover { box-shadow: 0 2px 14px rgba(0,0,0,.5), 0 0 0 2px var(--brass-line); }
+.cp-badge:hover,
+.cp-badge:focus-visible {
+  transform: scale(1.14);
+  box-shadow:
+    0 0 0 1.5px rgba(17,14,9,.55),
+    0 0 0 6px rgba(176,141,87,.45),
+    0 8px 22px rgba(0,0,0,.55);
+}
+.cp-badge:active { transform: scale(1.02); }
 
-/* The pulse lives on a child so the parent's transform stays purely
-   translational, and is pointer-events:none so its expanded 1.25x box
-   doesn't eat drags in a ring around the disc. */
-.cp-ring {
+/* The glyph, struck into the coin rather than printed on it.
+   Instrument Serif only ships a 400 weight, which at this size reads thin and
+   apologetic — wrong for something whose whole job is to say "press me". The
+   body face at 700 has the density, and the two-tone shadow (light below,
+   dark above) is what sells the engraving: it reads as debossed metal because
+   the highlight falls where a struck edge would catch the light. */
+.cp-glyph {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 23px;
+  line-height: 1;
+  color: #241c10;
+  text-shadow: 0 1px 0 rgba(255,244,222,.5), 0 -1px 1px rgba(0,0,0,.4);
+  /* Optical, not geometric: a "?" carries its mass high, so centring the box
+     leaves it looking like it is floating off the top of the coin. */
+  transform: translateY(1px);
+}
+.cp-done .cp-glyph {
+  font-size: 21px;
+  transform: translateY(0);
+  text-shadow: 0 1px 0 rgba(240,255,244,.45), 0 -1px 1px rgba(0,0,0,.35);
+}
+.cp-far .cp-glyph { font-size: 17px; }
+
+/* The halo — expanding ring that makes the badge findable peripherally.
+   On a child, pointer-events:none, so its 1.9x box never eats a drag. */
+.cp-halo {
   position: absolute;
-  inset: -6px;
+  inset: -4px;
   border-radius: 999px;
-  border: 1px solid var(--brass-line);
+  border: 2px solid var(--brass);
   pointer-events: none;
-  animation: cp-pulse 2.6s ease-out infinite;
+  animation: cp-pulse 2.4s ease-out infinite;
 }
 @keyframes cp-pulse {
-  0%   { transform: scale(.86); opacity: .9; }
-  70%  { transform: scale(1.25); opacity: 0; }
-  100% { transform: scale(1.25); opacity: 0; }
+  0%   { transform: scale(.9); opacity: .75; }
+  70%  { transform: scale(1.9); opacity: 0; }
+  100% { transform: scale(1.9); opacity: 0; }
 }
-/* A checkpoint already answered stops advertising itself. */
-.cp-done { background: linear-gradient(150deg, #7cae86, var(--jade)); }
-.cp-done .cp-ring { animation: none; opacity: .35; }
+
+/* The stem — a leader tying the marker down to the storefront, so it reads as
+   placed in the space rather than pasted onto the screen. Outside .cp-body,
+   so it holds still while the badge bobs above it. */
+.cp-stem {
+  width: 1px;
+  height: 22px;
+  background: linear-gradient(rgba(176,141,87,.85), transparent);
+  pointer-events: none;
+}
+.cp-stem::after {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 5px;
+  margin: 20px 0 0 -2px;
+  border-radius: 999px;
+  background: var(--brass);
+  box-shadow: 0 0 6px rgba(176,141,87,.9);
+}
+
+/* The name plate — what shop, and what it pays. */
+.cp-plate {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid rgba(176,141,87,.4);
+  background: rgba(11,10,9,.82);
+  box-shadow: 0 4px 14px rgba(0,0,0,.45);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #f4f0e9;
+  transition: border-color .18s ease;
+}
+.cp-plate:hover { border-color: var(--brass); }
+.cp-xp {
+  color: var(--brass);
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Answered: stops advertising, keeps its place as a landmark. */
+.cp-done .cp-badge {
+  background: radial-gradient(circle at 36% 30%, rgba(255,255,255,.4), transparent 58%),
+              linear-gradient(155deg, #a8d0b0, var(--jade) 60%, #3f6b48);
+}
+.cp-done .cp-halo { animation: none; opacity: 0; }
+.cp-done .cp-body { animation: none; }
+.cp-done .cp-plate { border-color: rgba(124,174,134,.4); }
+.cp-done .cp-xp { color: var(--jade); }
+
+/* Far away, the plate is unreadable clutter — drop it and keep the badge.
+   The engine adds this class only when the depth bucket changes, never
+   per frame. */
+.cp-far .cp-plate,
+.cp-far .cp-stem { display: none; }
+.cp-far .cp-badge { width: 34px; height: 34px; }
 
 /* ── Quiz drawer ──
    No scrim, deliberately: a backdrop is exactly what would kill "la visite
@@ -413,6 +677,40 @@ body {
 }
 [data-theme="light"] .drawer {
   background: linear-gradient(90deg, rgba(236,233,226,.80), rgba(255,255,255,.97) 22%);
+}
+
+/* ── Lightbox ──
+   Above the drawer (z 20) and below the loading veil (z 30). It has to be a
+   sibling of the HUD rather than live inside the drawer: the drawer animates
+   its transform, and a transformed ancestor becomes the containing block for
+   `position: fixed` descendants, which would trap the overlay inside the
+   panel instead of covering the screen. */
+.lightbox {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  padding: 5vmin;
+  background: rgba(6, 5, 5, 0.86);
+  animation: lightbox-in 0.18s ease-out both;
+}
+@keyframes lightbox-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Viewport units, not percentages: a percentage max-height resolves against
+   the grid area, which a large image can argue its way out of — this one
+   spilled off the bottom of the screen. vh/vw cannot be negotiated. */
+.lightbox img {
+  max-width: 88vw;
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
 }
 
 /* Flight progress — a hairline sweeping the top of the stage, not a spinner. */

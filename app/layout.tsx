@@ -19,7 +19,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Meridian — Anfa Place",
+  title: "MVR World — Anfa Place",
   description:
     "Explorez le mall en visite 360°, repérez les boutiques et répondez à leurs quiz pour gagner des récompenses.",
 };
@@ -28,11 +28,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // Dark is the default theme; useTheme re-points this meta on a switch.
   themeColor: "#0b0a09",
 };
-
-const themeScript = `(function(){try{var t=localStorage.getItem('smartmall_theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`;
 
 export default function RootLayout({
   children,
@@ -45,9 +42,6 @@ export default function RootLayout({
       className={`${archivo.variable} ${instrumentSerif.variable} antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       {/* The visit fills the viewport and nothing scrolls the document —
           every surface is a floating overlay above the panorama. */}
       <body className="h-dvh overflow-hidden bg-bg text-ink">

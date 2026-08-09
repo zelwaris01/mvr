@@ -388,6 +388,167 @@ export const QUESTIONS: Question[] = [
       "Le balnéaire est l'une des collections phares de la marque, aux côtés de la nuit et de la lingerie.",
     xpReward: XP_PER_QUESTION,
   },
+  /* ────────────────────────────────────────────────────────────────────
+     PREMIER ÉTAGE — La Table de Chocorico, ALTI, SUMMER MARKET.
+
+     ⚠ Ces trois enseignes sont balisées dans le scan mais je ne dispose
+     d'aucune information fiable à leur sujet. Plutôt que d'inventer des
+     faits, la première question de chaque série porte sur la visite
+     elle-même (le niveau), ce qui est vérifiable en se déplaçant. Les
+     deux suivantes sont des ESPACE-RÉSERVÉS à remplacer par Anfa Place
+     avant toute mise en ligne — ne pas publier en l'état.
+     ──────────────────────────────────────────────────────────────────── */
+  {
+    id: "chocorico-1",
+    storeSlug: "chocorico",
+    questionText: "À quel niveau du mall se trouve La Table de Chocorico ?",
+    options: ["Rez-de-chaussée", "Premier étage", "Sous-sol", "Terrasse"],
+    correctIndex: 1,
+    explanation: "La Table de Chocorico se trouve au premier étage.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "chocorico-2", // ⚠ à valider
+    storeSlug: "chocorico",
+    questionText: "Quelle est la spécialité de La Table de Chocorico ?",
+    options: ["Le chocolat", "Les glaces", "Les burgers", "Les pizzas"],
+    correctIndex: 0,
+    explanation: "La maison est avant tout chocolatier et pâtissier.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "chocorico-3", // ⚠ à valider
+    storeSlug: "chocorico",
+    questionText: "Que peut-on faire sur place à La Table de Chocorico ?",
+    options: [
+      "S'asseoir au salon de thé",
+      "Faire réparer ses chaussures",
+      "Essayer des lunettes",
+      "Retirer un colis",
+    ],
+    correctIndex: 0,
+    explanation: "L'enseigne propose un salon de thé en plus de la vente.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  {
+    id: "sogno-1",
+    storeSlug: "sogno",
+    questionText: "Quel dessert italien donne son nom à l'enseigne SOGNO ?",
+    options: ["Le tiramisu", "La panna cotta", "Le cannolo", "La glace"],
+    correctIndex: 0,
+    explanation:
+      "L'enseigne s'appelle « SOGNO — Tiramisu & Coffee » : le tiramisu est sa signature.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "sogno-2",
+    storeSlug: "sogno",
+    questionText: "Que sert SOGNO en accompagnement de ses desserts ?",
+    options: ["Du café", "Du thé à la menthe", "Des jus pressés", "Du chocolat chaud"],
+    correctIndex: 0,
+    explanation: "Le café figure dans le nom même de l'enseigne.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "sogno-3",
+    storeSlug: "sogno",
+    questionText: "À quel niveau du mall se trouve SOGNO ?",
+    options: ["Rez-de-chaussée", "Premier étage", "Sous-sol", "Terrasse"],
+    correctIndex: 1,
+    explanation: "SOGNO se trouve au premier étage.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  {
+    id: "maki-mac-1",
+    storeSlug: "maki-mac",
+    questionText: "Quelle cuisine évoque le nom MAKI MAC ?",
+    options: ["Japonaise", "Italienne", "Mexicaine", "Libanaise"],
+    correctIndex: 0,
+    explanation:
+      "Le maki est un rouleau de riz et d'algue emblématique de la cuisine japonaise.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "maki-mac-2", // ⚠ espace-réservé — contenu à fournir
+    storeSlug: "maki-mac",
+    questionText: "Qu'est-ce qu'un maki ?",
+    options: [
+      "Un rouleau de riz entouré d'algue",
+      "Une soupe de nouilles",
+      "Une brochette grillée",
+      "Un beignet sucré",
+    ],
+    correctIndex: 0,
+    explanation: "Le maki est un rouleau de riz vinaigré enveloppé de nori.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "maki-mac-3",
+    storeSlug: "maki-mac",
+    questionText: "À quel niveau du mall se trouve MAKI MAC ?",
+    options: ["Rez-de-chaussée", "Premier étage", "Sous-sol", "Parking"],
+    correctIndex: 1,
+    explanation: "MAKI MAC se trouve au premier étage.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  {
+    id: "alti-1",
+    storeSlug: "alti",
+    questionText: "À quel niveau du mall se trouve ALTI ?",
+    options: ["Rez-de-chaussée", "Premier étage", "Sous-sol", "Terrasse"],
+    correctIndex: 1,
+    explanation: "ALTI se trouve au premier étage d'Anfa Place.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "alti-2", // ⚠ espace-réservé — contenu à fournir
+    storeSlug: "alti",
+    questionText: "Dans quel univers ALTI propose-t-elle ses collections ?",
+    options: ["La mode", "L'électroménager", "Le jardinage", "L'automobile"],
+    correctIndex: 0,
+    explanation: "À compléter avec la description officielle de l'enseigne.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "alti-3", // ⚠ espace-réservé — contenu à fournir
+    storeSlug: "alti",
+    questionText: "Depuis quel étage accède-t-on à ALTI ?",
+    options: ["Par la galerie du premier", "Par le parking", "Par la terrasse", "Par le sous-sol"],
+    correctIndex: 0,
+    explanation: "À compléter avec les informations d'Anfa Place.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  {
+    id: "summer-market-1",
+    storeSlug: "summer-market",
+    questionText: "À quel niveau se tient le SUMMER MARKET ?",
+    options: ["Rez-de-chaussée", "Premier étage", "Sous-sol", "Parking"],
+    correctIndex: 1,
+    explanation: "Le SUMMER MARKET occupe un espace du premier étage.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "summer-market-2", // ⚠ espace-réservé — contenu à fournir
+    storeSlug: "summer-market",
+    questionText: "Quel type d'espace est le SUMMER MARKET ?",
+    options: ["Un espace éphémère", "Une banque", "Un cinéma", "Un parking"],
+    correctIndex: 0,
+    explanation: "À compléter avec la description officielle de l'animation.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "summer-market-3", // ⚠ espace-réservé — contenu à fournir
+    storeSlug: "summer-market",
+    questionText: "À quelle saison le SUMMER MARKET est-il associé ?",
+    options: ["L'été", "L'hiver", "L'automne", "Le printemps"],
+    correctIndex: 0,
+    explanation: "À compléter avec le calendrier d'animation du centre.",
+    xpReward: XP_PER_QUESTION,
+  },
 ];
 
 /**

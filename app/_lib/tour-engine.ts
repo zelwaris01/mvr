@@ -40,7 +40,9 @@ type Slot = {
 const CULL_MARGIN = 64;
 /** Past this, a marker is more clutter than wayfinding. Metres, squared below. */
 const MAX_DIST_M = 30;
-const OPACITY_STEPS = [1, 0.86, 0.7, 0.54, 0.38];
+const OPACITY_STEPS = [1, 0.9, 0.78, 0.62, 0.46];
+/** From this depth bucket outward, drop the name plate and shrink the badge. */
+const FAR_BUCKET = 2;
 
 export class CheckpointEngine {
   private readonly conv: MpSdk["Conversion"];
@@ -224,18 +226,17 @@ export class CheckpointEngine {
             el.style.transform = `translate3d(${qx}px,${qy}px,0)`;
           }
 
-          if (this.reduced) {
-            if (m.op !== 0) {
-              m.op = 0;
-              el.style.opacity = "1";
-            }
-          } else {
-            let b = ((distSq * 5) / maxSq) | 0;
-            if (b > 4) b = 4;
-            if (b !== m.op) {
-              m.op = b;
-              el.style.opacity = String(OPACITY_STEPS[b]);
-            }
+          // The depth bucket drives two things, and both are written only
+          // when the bucket actually flips — a handful of times per walk,
+          // not per frame.
+          let b = ((distSq * 5) / maxSq) | 0;
+          if (b > 4) b = 4;
+          if (b !== m.op) {
+            m.op = b;
+            el.style.opacity = this.reduced ? "1" : String(OPACITY_STEPS[b]);
+            // Past the midpoint the name plate is unreadable, so it goes and
+            // the badge shrinks to a distant landmark.
+            el.classList.toggle("cp-far", b >= FAR_BUCKET);
           }
         }
       }

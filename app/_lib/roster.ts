@@ -8,8 +8,28 @@ export type TagRecord = {
   tagId: string;
   label: string;
   slug: string | null;
-  /** Where the visible puck floats — the anchor point for our marker. */
+  /** The pin's own copy in the model — phone numbers, links, opening hours. */
+  description: string;
+  /**
+   * Every image the pin carries, in the model's own order — logo and product
+   * shots alike. Matterport pages through these in its billboard ("4 of 5"),
+   * so taking only the first threw most of the shop's photography away.
+   */
+  media: string[];
+  /** Where Matterport's puck floats, out in front of the surface. */
   discPosition: Vec3;
+  /**
+   * Where the pin's stem meets the shopfront — usually on the signage itself.
+   * The disc floats out from here toward the viewer, which is why a marker
+   * drawn at `discPosition` can appear beside a shop rather than on it.
+   */
+  anchorPosition: Vec3;
+  /**
+   * The direction the pin's stem points, i.e. straight out from the surface
+   * it is attached to. Effectively the shopfront's outward normal, which is
+   * what tells us where "standing in front of this shop" is.
+   */
+  stemVector: Vec3;
   /** Floor the pin sits on, so we don't fly to the level below. */
   floorSequence?: number;
   /** Nearest walkable sweep, resolved once Sweep.data arrives. Null = no flight. */
@@ -21,10 +41,22 @@ export type DiscoveredStore = {
   slug: string;
   name: string;
   description: string;
+  category: string;
   reward: string;
+  /** Logo from the model's pin when it has one, else the catalogue thumbnail. */
+  image: string;
+  /** True when `image` came from the model rather than the placeholder set. */
+  imageFromModel: boolean;
+  /** Every photo the pin carries — shown as the shop's gallery. */
+  gallery: string[];
+  /** The pin's own description text, if it carries one. */
+  tagText: string;
   tagId: string;
   sweepId: string | null;
+  /** Used for navigation — where to stand and what to face. */
   discPosition: Vec3;
+  /** Used for the on-screen marker — sits on the shopfront, not beside it. */
+  markerPosition: Vec3;
   questions: Question[];
 };
 
@@ -54,10 +86,19 @@ export function buildRoster(
       slug: store.slug,
       name: store.name,
       description: store.description,
+      category: store.category,
       reward: store.reward,
+      // The model's own logo wins over our stock placeholder whenever the pin
+      // carries one — it is the real brand mark, kept current by whoever
+      // maintains the scan.
+      image: tag.media[0] ?? store.image,
+      imageFromModel: tag.media.length > 0,
+      gallery: tag.media,
+      tagText: tag.description,
       tagId: tag.tagId,
       sweepId: tag.sweepId,
       discPosition: tag.discPosition,
+      markerPosition: tag.anchorPosition,
       questions: questionsByStore[store.slug] ?? [],
     });
   }

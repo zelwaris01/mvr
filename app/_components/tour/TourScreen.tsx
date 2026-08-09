@@ -1,18 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MATTERPORT_TOUR_URL } from "@/app/_lib/constants";
+import {
+  MATTERPORT_LEVELS,
+  tourUrlFor,
+  XP_PER_STORE_VISIT,
+} from "@/app/_lib/constants";
 import { QUESTIONS_BY_STORE } from "@/app/_lib/questions-data";
 import { STORES } from "@/app/_lib/stores-data";
 import { buildRoster, rosterFacts } from "@/app/_lib/roster";
-import { lookAtRotation } from "@/app/_lib/tour-nav";
+import { aimAt } from "@/app/_lib/tour-nav";
 import { useCheckpointOverlay } from "@/app/_lib/useCheckpointOverlay";
 import { useMatterportTour } from "@/app/_lib/useMatterportTour";
 import { useGame } from "@/app/_components/GameStateProvider";
 import { CheckpointLayer } from "./CheckpointLayer";
 import { QuizDrawer } from "./QuizDrawer";
 import { BadgeOverlay } from "./BadgeOverlay";
-import { SideRail, StoreRail, TourTopBar } from "./TourHud";
+import { SideRail, StoreRail, TourMenu, TourTopBar, TourVeil } from "./TourHud";
 
 const FLIGHT_MS = 1600;
 const FLIGHT_MS_REDUCED = 400;
@@ -24,8 +28,14 @@ export function TourScreen() {
   const stageRef = useRef<HTMLDivElement>(null);
   const { progress, exploreStore, syncRoster } = useGame();
 
+  /** Which scan is loaded. Each level of the mall is its own Matterport space. */
+  const [levelIndex, setLevelIndex] = useState(0);
+  const level = MATTERPORT_LEVELS[levelIndex];
+
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [badgesOpen, setBadgesOpen] = useState(false);
+  /** Enlarged shop photo. Lives here so it can sit above the drawer. */
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const [flyingSlug, setFlyingSlug] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState(false);
   const [mapBroken, setMapBroken] = useState(false);
@@ -44,10 +54,19 @@ export function TourScreen() {
     setActiveSlug(slug);
   }, []);
 
-  const { status, tags, sdk, sdkRef } = useMatterportTour(iframeRef, {
-    // Clicking a disc in the scene: the visitor is already looking at it, so
-    // no flight — just open.
-    onTagClick: openStore,
+  // Declared before the SDK hook so the click handler can reach it; the hook
+  // reads its callbacks from refs, so a late binding is fine.
+  const flyRef = useRef<(slug: string) => void>(() => {});
+
+  const {
+    status,
+    tags,
+    sdk,
+    sdkRef,
+    currentSweepRef,
+  } = useMatterportTour(iframeRef, {
+    spaceId: level.id,
+    onTagClick: (slug) => flyRef.current(slug),
     // Walking in and stopping banks the visit but never opens a panel;
     // an unrequested drawer mid-stride is the interruption we're avoiding.
     onStoreEntered: exploreStore,
@@ -64,7 +83,7 @@ export function TourScreen() {
   }, [roster, syncRoster]);
 
   const markers = useMemo(
-    () => roster.map((s) => ({ id: s.tagId, world: s.discPosition })),
+    () => roster.map((s) => ({ id: s.tagId, world: s.markerPosition })),
     [roster]
   );
 
@@ -88,6 +107,24 @@ export function TourScreen() {
     return done;
   }, [roster, progress.answeredQuestions]);
 
+  /** XP still unclaimed per store — the number on each checkpoint's plate. */
+  const pendingXp = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const store of roster) {
+      const unanswered = store.questions.filter(
+        (q) => !progress.answeredQuestions[q.id]
+      );
+      const visitBonus = progress.exploredStores.includes(store.slug)
+        ? 0
+        : XP_PER_STORE_VISIT;
+      map.set(
+        store.slug,
+        visitBonus + unanswered.reduce((n, q) => n + q.xpReward, 0)
+      );
+    }
+    return map;
+  }, [roster, progress.answeredQuestions, progress.exploredStores]);
+
   // ── Fly to a storefront, then open its quiz ──
   const flyToStore = useCallback(
     async (slug: string) => {
@@ -97,6 +134,14 @@ export function TourScreen() {
 
       // No SDK or no reachable sweep: skip the flight, still open the quiz.
       if (!entry || !sdk || !entry.sweepId) {
+        openStore(slug);
+        exploreStore(slug);
+        return;
+      }
+
+      // Already standing there: opening a panel is the whole interaction.
+      // Flying to the sweep you're on is a jarring no-op.
+      if (currentSweepRef.current === entry.sweepId) {
         openStore(slug);
         exploreStore(slug);
         return;
@@ -117,25 +162,51 @@ export function TourScreen() {
           setMapMode(false);
         }
 
-        const sweeps = await sdk.Sweep.data.waitUntil(() => true);
-        const from = sweeps[entry.sweepId]?.position;
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            `[tour] flying to ${slug} sweep=${entry.sweepId} from=${currentSweepRef.current}`
+          );
+        }
 
         // A moveTo that never settles would leave the rail disabled forever —
-        // the worst possible outcome here, so it races a watchdog.
+        // the worst possible outcome here, so it races a watchdog. The budget
+        // is deliberately generous: a fly across the mall runs well past the
+        // requested transitionTime, and cutting it short aborts a flight that
+        // was about to land.
+        // Aim along the ground at the storefront, never at the pin itself.
+        // Pins float above head height and `Camera.lookAt` obliges by tilting
+        // to centre them, which — combined with the pitch my own trigonometry
+        // produced — left arrivals staring at the floor. A shopfront is read
+        // at eye level, so the pitch is pinned to the horizon and only the
+        // heading is computed.
+        // No rotation passed to moveTo: the heading is settled after arrival
+        // by measuring where the shopfront actually lands on screen, which
+        // needs no assumption about Matterport's yaw convention.
         await Promise.race([
           sdk.Sweep.moveTo(entry.sweepId, {
-            rotation: from
-              ? lookAtRotation(from, entry.discPosition)
-              : undefined,
             transition: reduced
               ? sdk.Sweep.Transition.FADEOUT
               : sdk.Sweep.Transition.FLY,
             transitionTime: ms,
           }),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("flight timeout")), ms + 2000)
+            setTimeout(() => reject(new Error("flight timeout")), ms + 8000)
           ),
         ]);
+
+        try {
+          const stage = stageRef.current;
+          if (stage) {
+            await aimAt(sdk, entry.markerPosition, {
+              w: stage.clientWidth,
+              h: stage.clientHeight,
+            });
+          }
+        } catch (err) {
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[tour] could not aim at the storefront:", err);
+          }
+        }
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
           console.warn("[tour] flight failed:", err);
@@ -152,8 +223,24 @@ export function TourScreen() {
         }
       }
     },
-    [roster, sdkRef, mapMode, openStore, exploreStore]
+    [roster, sdkRef, currentSweepRef, mapMode, openStore, exploreStore]
   );
+
+  // Keep the latch the SDK's tag-click handler calls pointed at the live
+  // closure, so an in-scene click flies exactly like a rail click.
+  useEffect(() => {
+    flyRef.current = flyToStore;
+  }, [flyToStore]);
+
+  // ── Levels ──
+  // Not Floor.moveTo, and not a camera move at all: the levels are separate
+  // Matterport scans, so changing level means loading a different model and
+  // reconnecting the SDK. The veil covers the reload.
+  const goToLevel = useCallback((index: number) => {
+    setActiveSlug(null);
+    setBadgesOpen(false);
+    setLevelIndex(index);
+  }, []);
 
   // ── Map view ──
   const toggleMap = useCallback(async () => {
@@ -181,18 +268,42 @@ export function TourScreen() {
   }, [mapMode, sdkRef]);
 
   const activeStore = roster.find((s) => s.slug === activeSlug) ?? null;
-  const unmatched = tags.filter((t) => !t.slug);
+
+  /**
+   * The veil unmounts a beat after the fade so the transition can actually
+   * play — removing it the instant status flips would cut Matterport's loading
+   * screen back into view for a frame.
+   */
+  const [veilRetired, setVeilRetired] = useState(false);
+  useEffect(() => {
+    if (status === "connecting") return;
+    const t = setTimeout(() => setVeilRetired(true), 700);
+    return () => clearTimeout(t);
+  }, [status]);
+  const veilMounted = !veilRetired;
 
   return (
     <div ref={stageRef} className="stage">
+      {/* key on the space id: switching level must build a fresh iframe, not
+          re-point an existing one, so the SDK cannot attach to a stale
+          document mid-swap. */}
       <iframe
+        key={level.id}
         ref={iframeRef}
-        src={MATTERPORT_TOUR_URL}
+        src={tourUrlFor(level.id)}
         className="stage-frame"
         allow="fullscreen; xr-spatial-tracking"
         allowFullScreen
         title="Visite virtuelle du mall"
       />
+
+      {/* Cover Matterport's chrome, which no URL param or SDK call reliably
+          removes: the control bar along the bottom and the wordmark top-left.
+          Both sit above the iframe and below the HUD. */}
+      <div className="chrome-mask" aria-hidden />
+      <div className="chrome-mask-tl" aria-hidden />
+
+      {veilMounted && <TourVeil leaving={status !== "connecting"} />}
 
       {flyingSlug && (
         <div
@@ -202,7 +313,8 @@ export function TourScreen() {
       )}
 
       <div className="hud">
-        <TourTopBar />
+        {/* Held back until the veil's wordmark has flown into this spot. */}
+        <TourTopBar markVisible={veilRetired} />
 
         {status === "ready" && !mapBroken && (
           <SideRail
@@ -213,14 +325,19 @@ export function TourScreen() {
             }}
             mapDisabled={flyingSlug !== null}
             mapActive={mapMode}
+            levels={MATTERPORT_LEVELS}
+            currentLevel={levelIndex}
+            onLevel={goToLevel}
+            floorsDisabled={flyingSlug !== null}
           />
         )}
 
         <CheckpointLayer
           stores={roster}
           doneSlugs={doneSlugs}
+          pendingXp={pendingXp}
           bind={bind}
-          onSelect={openStore}
+          onSelect={flyToStore}
           disabled={flyingSlug !== null}
         />
 
@@ -229,25 +346,63 @@ export function TourScreen() {
           activeSlug={activeSlug}
           flyingSlug={flyingSlug}
           doneSlugs={doneSlugs}
+          pendingXp={pendingXp}
           onSelect={flyToStore}
           connecting={status === "connecting"}
         />
 
         {activeStore && (
+          // Keyed on the slug so opening a different shop remounts the panel:
+          // its tab choice and quiz feedback are initial state, and should
+          // start fresh per store rather than be reset from an effect.
           <QuizDrawer
+            key={activeStore.slug}
             store={activeStore}
             onClose={() => setActiveSlug(null)}
+            onOpenImage={setLightbox}
           />
         )}
 
         {badgesOpen && <BadgeOverlay onClose={() => setBadgesOpen(false)} />}
 
-        <TourStatusNote
-          status={status}
-          rosterCount={roster.length}
-          unmatched={unmatched}
-        />
+        {status === "ready" && <TourMenu />}
+
+        <TourStatusNote status={status} rosterCount={roster.length} />
+
+        {lightbox && (
+          <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
+        )}
       </div>
+    </div>
+  );
+}
+
+/** A shop photo at full size, without leaving the visit. */
+function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="lightbox"
+      role="dialog"
+      aria-label="Image agrandie"
+      onClick={onClose}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" onClick={(e) => e.stopPropagation()} />
+      <button
+        onClick={onClose}
+        aria-label="Fermer l'image"
+        className="absolute top-4 right-4 w-10 h-10 rounded-full pane grid place-items-center text-ink-2 hover:text-brass transition-colors"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+      </button>
     </div>
   );
 }
@@ -256,19 +411,19 @@ export function TourScreen() {
  * The one place that explains a non-ready visit. Never blanks the screen —
  * the iframe is painting Matterport's own progress behind it, which is the
  * most honest signal available.
+ *
+ * Pins that match no store are reported to the console only (see the
+ * `[tour] tag … -> unmatched` line in useMatterportTour); they used to print
+ * on screen, which was useful exactly once and clutter thereafter.
  */
 function TourStatusNote({
   status,
   rosterCount,
-  unmatched,
 }: {
   status: string;
   rosterCount: number;
-  unmatched: Array<{ tagId: string; label: string }>;
 }) {
-  if (status === "ready" && rosterCount > 0 && unmatched.length === 0) {
-    return null;
-  }
+  if (status === "ready" && rosterCount > 0) return null;
 
   return (
     <div className="hud-on absolute left-4 bottom-28 md:bottom-4 max-w-[320px] flex flex-col gap-1.5 px-4 py-3 rounded-xl pane">
@@ -292,20 +447,6 @@ function TourStatusNote({
         <span className="text-[11px] text-ink-2 leading-snug">
           Aucune boutique balisée dans ce modèle.
         </span>
-      )}
-
-      {/* The single most useful debugging affordance in the app: the labels
-          that failed to match, ready to paste into TAG_OVERRIDES. */}
-      {process.env.NODE_ENV !== "production" && unmatched.length > 0 && (
-        <>
-          <span className="text-[10px] text-ink-3 leading-snug">
-            {unmatched.length} pastille{unmatched.length > 1 ? "s" : ""} non
-            reconnue{unmatched.length > 1 ? "s" : ""} — TAG_OVERRIDES :
-          </span>
-          <pre className="text-[9.5px] leading-[1.6] text-ink-3 overflow-x-auto">
-            {unmatched.map((t) => `"${t.tagId}": "", // ${t.label}`).join("\n")}
-          </pre>
-        </>
       )}
     </div>
   );

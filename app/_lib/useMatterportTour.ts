@@ -347,6 +347,10 @@ export function useMatterportTour(
             stemVector: { x: stem.x, y: stem.y, z: stem.z },
             sweepId: null,
           });
+          // A pin that names no shop is dead weight in this app, and is what
+          // the promotional billboards hang off. Take it out of the scene.
+          if (!slug) removeNative(id);
+
           if (attachmentIds.length > 0) tagMedia.set(id, attachmentIds);
           resolveMedia();
           if (process.env.NODE_ENV !== "production") {
@@ -374,6 +378,28 @@ export function useMatterportTour(
          * because an invisible tag still accepts clicks and would silently
          * steal them from our gold markers.
          */
+        /**
+         * Deletes a pin from the running scene.
+         *
+         * Reserved for pins that match no shop. Those have no function here,
+         * and they are the ones carrying Matterport's promotional billboards —
+         * the "Débloquer mes Récompenses" and "Formulaire de participation"
+         * panels that dock themselves open over the storefronts. Disabling and
+         * closing them was not enough: a docked billboard is not "open" in the
+         * sense `allowAction` governs, and it re-docks. Removing the pin
+         * removes anything attached to it.
+         *
+         * Session-only — it does not touch the model on Matterport's side.
+         */
+        const removeNative = (id: string) => {
+          try {
+            mpSdk.Tag.remove?.(id)?.catch?.(() => {});
+          } catch {}
+          try {
+            mpSdk.Mattertag.remove?.(id)?.catch?.(() => {});
+          } catch {}
+        };
+
         const suppressNative = (tag: MpSdk.Tag.TagData) => {
           if (suppressed.has(tag.id) && !tag.enabled) return;
           suppressed.add(tag.id);
@@ -408,6 +434,29 @@ export function useMatterportTour(
               suppressed.delete(id);
               flushTags();
             },
+          })
+        );
+
+        // Nothing may open a billboard over the scene.
+        //
+        // Disabling a pin and denying its actions stops it being *opened*, but
+        // Showcase can dock one on load — which is how the "Débloquer mes
+        // Récompenses" and "Formulaire de participation" panels kept appearing
+        // over the storefronts. `openTags` reports anything hovered, selected
+        // or docked; closing it immediately is the only reliable way to keep
+        // the scene clear, since none of this can be reached with CSS from
+        // outside the iframe.
+        subs.push(
+          mpSdk.Tag.openTags.subscribe((open) => {
+            const ids = new Set<string>();
+            if (open?.docked) ids.add(open.docked);
+            if (open?.hovered) ids.add(open.hovered);
+            for (const id of open?.selected ?? []) ids.add(id);
+            for (const id of ids) {
+              try {
+                mpSdk.Tag.close?.(id)?.catch?.(() => {});
+              } catch {}
+            }
           })
         );
 

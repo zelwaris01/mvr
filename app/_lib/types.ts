@@ -43,6 +43,16 @@ export interface Badge {
   condition: BadgeCondition;
 }
 
+/** An XP tier the whole visit works toward, shown on the profile page. */
+export interface Reward {
+  id: string;
+  title: string;
+  description: string;
+  discount: string;
+  storeName: string;
+  requiredXp: number;
+}
+
 // ---- User Progress (persisted in LocalStorage) ----
 export interface AnswerRecord {
   selectedIndex: number;
@@ -56,4 +66,12 @@ export interface UserProgress {
   totalXp: number;
   unlockedBadges: string[];
   completedAt: number | null;
+  /**
+   * When each quiz retry was taken, newest last. The quota is a rolling
+   * window rather than a counter that resets on the hour, so it can't be
+   * gamed by waiting for a boundary.
+   *
+   * Optional on read: payloads saved before retries existed won't carry it.
+   */
+  retries?: number[];
 }

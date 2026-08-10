@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { BADGES } from "@/app/_lib/rewards-data";
 import { useGame } from "@/app/_components/GameStateProvider";
+import { usePress } from "@/app/_lib/usePress";
 
 /**
  * The badge sheet. Mutually exclusive with the quiz drawer — only one
@@ -10,6 +11,8 @@ import { useGame } from "@/app/_components/GameStateProvider";
  */
 export function BadgeOverlay({ onClose }: { onClose: () => void }) {
   const { progress } = useGame();
+  const closePress = usePress(onClose);
+  const scrimPress = usePress(onClose);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -23,6 +26,22 @@ export function BadgeOverlay({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="drawer-slot">
+      {/* Tap-anywhere-else to dismiss. Phones only: there the sheet leaves
+          most of the screen showing, and reaching a 40px × in the corner with
+          a thumb is the awkward way out of it. On desktop the drawer sits to
+          one side and the scene stays draggable next to it, which a scrim
+          would take away.
+
+          Left transparent on purpose — a dim would be a visible change to a
+          layout that is otherwise unaffected. It is `aria-hidden` and not
+          focusable because Escape and the × already serve keyboard users. */}
+      <button
+        {...scrimPress}
+        aria-hidden
+        tabIndex={-1}
+        className="sm:hidden absolute inset-0 pointer-events-auto cursor-default"
+      />
+
       <aside className="drawer on-dark" role="region" aria-label="Vos badges">
         <div className="flex items-start justify-between gap-3 p-5">
           <div className="flex flex-col gap-1.5">
@@ -35,9 +54,9 @@ export function BadgeOverlay({ onClose }: { onClose: () => void }) {
             </span>
           </div>
           <button
-            onClick={onClose}
+            {...closePress}
             aria-label="Fermer les badges"
-            className="w-8 h-8 rounded-full grid place-items-center text-ink-3 hover:text-brass border border-line hover:border-brass-line transition-colors flex-shrink-0"
+            className="w-10 h-10 rounded-full grid place-items-center text-ink-3 hover:text-brass border border-line hover:border-brass-line transition-colors flex-shrink-0"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>

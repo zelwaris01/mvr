@@ -141,29 +141,40 @@ body {
    to headings — Meridian sets small labels in Archivo 600 and reserves
    the serif for display sizes (17px and up).
    ══════════════════════════════════════════ */
-.font-display {
-  font-family: var(--font-display), Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  letter-spacing: .01em;
-  /* Evens out the line lengths of a display heading instead of leaving one
-     orphaned word on the last line. No-op on the single-line uses. */
-  text-wrap: balance;
+/* Everything from here to the end of CONTROLS lives in @layer components.
+   Tailwind v4 emits its utilities into @layer utilities, and an UNLAYERED
+   author rule beats any cascade layer regardless of specificity. Written
+   unlayered, these classes silently defeated every utility that touched the
+   same property on the same element:
+     .font-display's letter-spacing  ate every  tracking-*
+     .pane's border shorthand        ate every  border-*  (colour included)
+     .safe-area-pb's padding-bottom  ate every  pb-*
+   Layering them restores the expected "utility wins" behaviour. */
+@layer components {
+  .font-display {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    letter-spacing: .01em;
+    /* Evens out the line lengths of a display heading instead of leaving one
+       orphaned word on the last line. No-op on the single-line uses. */
+    text-wrap: balance;
+  }
+
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  /* Uppercase letter-spaced eyebrow label — a Meridian signature */
+  .eyebrow {
+    font-family: var(--font-body), system-ui, sans-serif;
+    font-weight: 500;
+    font-size: .6rem;
+    line-height: 1;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--brass);
+  }
+
+  .eyebrow-muted { color: var(--ink-3); }
 }
-
-.tabular-nums { font-variant-numeric: tabular-nums; }
-
-/* Uppercase letter-spaced eyebrow label — a Meridian signature */
-.eyebrow {
-  font-family: var(--font-body), system-ui, sans-serif;
-  font-weight: 500;
-  font-size: .6rem;
-  line-height: 1;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--brass);
-}
-
-.eyebrow-muted { color: var(--ink-3); }
 
 /* ══════════════════════════════════════════
    SURFACES
@@ -174,17 +185,19 @@ body {
    backdrop that repaints every frame forces a full readback and re-blur, and
    on integrated GPUs that alone can eat the frame budget. Everything above the
    live scene uses .pane instead. */
-.glass {
-  background: color-mix(in srgb, var(--bg) 62%, transparent);
-  border: 1px solid var(--line);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
+@layer components {
+  .glass {
+    background: color-mix(in srgb, var(--bg) 62%, transparent);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
 
-/* The HUD surface: same visual weight as .glass, no per-frame blur cost. */
-.pane {
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  border: 1px solid var(--line);
+  /* The HUD surface: same visual weight as .glass, no per-frame blur cost. */
+  .pane {
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    border: 1px solid var(--line);
+  }
 }
 
 /* ── Progress ring ──
@@ -209,35 +222,38 @@ body {
    CONTROLS
    ══════════════════════════════════════════ */
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .5rem;
-  border-radius: 999px;
-  padding: 13px 24px;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color .2s ease, color .2s ease, border-color .2s ease,
-              transform .12s ease;
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    border-radius: 999px;
+    padding: 13px 24px;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color .2s ease, color .2s ease, border-color .2s ease,
+                transform .12s ease;
+  }
+  /* Press feedback — the one place a scale reads as touch rather than as decoration */
+  .btn:active { transform: scale(.972); }
+
+  /* Primary — inverted fill (ivory on dark, ink on light), warms to brass */
+  .btn-fill { background: var(--fill); color: var(--on-fill); }
+  .btn-fill:hover { background: var(--brass); color: var(--on-brass); }
+
+  /* Secondary — hairline outline */
+  .btn-ghost { border: 1px solid var(--line-strong); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--brass); color: var(--brass); }
+
+  /* Accent — solid brass */
+  .btn-brass { background: var(--brass); color: var(--on-brass); }
+  .btn-brass:hover { background: var(--fill); color: var(--on-fill); }
 }
-/* Press feedback — the one place a scale reads as touch rather than as decoration */
-.btn:active { transform: scale(.972); }
-
-/* Primary — inverted fill (ivory on dark, ink on light), warms to brass */
-.btn-fill { background: var(--fill); color: var(--on-fill); }
-.btn-fill:hover { background: var(--brass); color: var(--on-brass); }
-
-/* Secondary — hairline outline */
-.btn-ghost { border: 1px solid var(--line-strong); color: var(--ink); }
-.btn-ghost:hover { border-color: var(--brass); color: var(--brass); }
-
-/* Accent — solid brass */
-.btn-brass { background: var(--brass); color: var(--on-brass); }
-.btn-brass:hover { background: var(--fill); color: var(--on-fill); }
 
 /* ── Pointer affordance ──
    Anything that responds to a click says so. Tailwind doesn't apply this by
@@ -272,6 +288,20 @@ button:disabled,
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 
+/* ── Side-rail button ──
+   Padding lives here rather than in a utility so it can shrink on short
+   viewports. With four entries the rail is ~254px tall, which on a landscape
+   phone (360px high) would run through both chrome masks and into the brand
+   rail. Compacting reclaims about a quarter of that. */
+@layer components {
+  .rail-btn { padding-block: 14px; touch-action: manipulation; }
+
+  @media (max-height: 620px) {
+    .rail-btn { padding-block: 8px; gap: 3px; }
+    .rail-btn svg { width: 16px; height: 16px; }
+  }
+}
+
 /* ── Horizontal rail ──
    Everything that scrolls sideways. `proximity` snapping tidies a flick up
    against the nearest card without fighting a deliberate half-scroll the way
@@ -285,8 +315,21 @@ button:disabled,
 }
 .rail > * { scroll-snap-align: start; }
 
-/* ── Safe area ── */
-.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* ── Safe area ──
+   Margins, not padding. The old `.safe-area-pb` set padding-bottom, which put
+   it in direct conflict with every `pb-*` utility on the same element — and
+   being unlayered it won, so the intended padding never applied and the
+   element sat flush to the edge on every device without a home indicator.
+   Expressing the inset as a margin means it composes with the padding instead
+   of replacing it. */
+@layer components {
+  .safe-b { margin-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-x {
+    margin-left: env(safe-area-inset-left, 0px);
+    margin-right: env(safe-area-inset-right, 0px);
+  }
+  .safe-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
 
 /* ── Animations ── */
 @keyframes scale-in {
@@ -332,7 +375,12 @@ button:disabled,
   left: 0;
   right: 0;
   bottom: 0;
-  height: 104px;
+  /* Tall enough to stay behind the brand rail, but capped as a share of the
+     viewport: at fixed heights the two masks took 240px, which on a 360px-tall
+     landscape phone is two thirds of the screen and leaves almost nothing to
+     drag. Matterport's chrome may peek out in landscape — an acceptable trade
+     against an unusable visit. */
+  height: min(112px, 20dvh);
   z-index: 5;                /* above the iframe, below the HUD */
   pointer-events: auto;
   background: linear-gradient(
@@ -349,19 +397,24 @@ button:disabled,
    a link out to matterport.com, so a purely visual cover would leave a
    invisible trapdoor off the site. The diagonal fade keeps it reading as a
    vignette rather than a patch. */
-.chrome-mask-tl {
+/* Top edge: the Matterport wordmark sits up here.
+   A corner wedge covered it but looked exactly like what it was — a dark
+   blob stuck on a bright scene. A full-width band mirroring the bottom deck
+   reads as chrome instead, and it is where our own wordmark already lives,
+   so it looks deliberate rather than applied. */
+.chrome-mask-top {
   position: absolute;
   left: 0;
+  right: 0;
   top: 0;
-  width: 240px;
-  height: 88px;
+  height: min(108px, 16dvh);
   z-index: 5;
   pointer-events: auto;
   background: linear-gradient(
-    118deg,
+    to bottom,
     var(--bg) 0%,
-    var(--bg) 44%,
-    color-mix(in srgb, var(--bg) 62%, transparent) 70%,
+    var(--bg) 40%,
+    color-mix(in srgb, var(--bg) 68%, transparent) 70%,
     transparent 100%
   );
 }
@@ -453,7 +506,17 @@ button:disabled,
   z-index: 10;
   pointer-events: none;
 }
-.hud-on { pointer-events: auto; }
+/* `touch-action` as well as `pointer-events`.
+   Over a cross-origin iframe the compositor decides which layer owns a touch
+   before the main thread hit-tests it. An overlay whose ancestor is
+   `pointer-events: none` can have its touch region resolve to the iframe
+   underneath, so the tap is delivered to Matterport and our button never sees
+   it — which is exactly the mouse-works / touch-doesn't split reported here.
+   Declaring a touch-action puts these elements in their own region. */
+.hud-on {
+  pointer-events: auto;
+  touch-action: manipulation;
+}
 
 /* ── Checkpoint markers ── */
 .cp-layer {
@@ -609,7 +672,9 @@ button:disabled,
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 5px 10px;
+  min-height: 32px;          /* it is billed as a thumb target — 22px wasn't */
+  touch-action: manipulation;
+  padding: 6px 11px;
   border-radius: 999px;
   white-space: nowrap;
   pointer-events: auto;
@@ -648,6 +713,15 @@ button:disabled,
 .cp-far .cp-stem { display: none; }
 .cp-far .cp-badge { width: 34px; height: 34px; }
 
+/* ── Offers flyout ──
+   z-index 18: above the checkpoint markers, below the quiz drawer (20) so a
+   shop panel wins if both are open. Both live inside .hud, whose own
+   z-index:10 caps everything here below the flight bar and loading veil —
+   which is what we want.
+
+   Anchored beside the rail on desktop. On phones it becomes a bottom sheet
+   above the brand rail: a 300px left flyout on a 360px screen would cover
+   the visit it exists to sit alongside. */
 /* ── Quiz drawer ──
    No scrim, deliberately: a backdrop is exactly what would kill "la visite
    reste active". The slot is a positioning wrapper only. */
@@ -657,12 +731,18 @@ button:disabled,
   z-index: 20;
   pointer-events: none;
 }
+/* Phones get a bottom sheet, not a side drawer.
+   At 360px wide the drawer was 92vw — it covered the side rail, the XP pill
+   and the menu, leaving ~29px of panorama and no way to reach the HUD, while
+   its own footer promised the visit was still active. A sheet leaves the
+   scene and the controls above it usable. */
 .drawer {
   position: absolute;
-  top: 0;
+  left: 0;
   right: 0;
   bottom: 0;
-  width: min(420px, 92vw);
+  top: auto;
+  height: min(78dvh, 640px);
   pointer-events: auto;
   display: flex;
   flex-direction: column;
@@ -671,12 +751,41 @@ button:disabled,
      trackpad back-swipe. This is the only gesture handling in the overlay —
      no stopPropagation, no preventDefault anywhere. */
   overscroll-behavior: contain;
-  background: linear-gradient(90deg, rgba(11,10,9,.72), rgba(11,10,9,.95) 22%);
-  border-left: 1px solid var(--line);
-  animation: slide-in-right .32s cubic-bezier(.22,.61,.36,1) both;
+  background: rgba(11, 10, 9, .95);
+  border-top: 1px solid var(--line);
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: sheet-up .3s cubic-bezier(.22, .61, .36, 1) both;
 }
-[data-theme="light"] .drawer {
-  background: linear-gradient(90deg, rgba(236,233,226,.80), rgba(255,255,255,.97) 22%);
+
+@keyframes sheet-up {
+  from { transform: translate3d(0, 101%, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
+@media (min-width: 640px) {
+  .drawer {
+    top: 0;
+    left: auto;
+    right: 0;
+    bottom: 0;
+    height: auto;
+    width: min(420px, 92vw);
+    border-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-left: 1px solid var(--line);
+    background: linear-gradient(90deg, rgba(11,10,9,.72), rgba(11,10,9,.95) 22%);
+    animation-name: slide-in-right;
+  }
+}
+
+[data-theme="light"] .drawer { background: rgba(255, 255, 255, .97); }
+@media (min-width: 640px) {
+  [data-theme="light"] .drawer {
+    background: linear-gradient(90deg, rgba(236,233,226,.80), rgba(255,255,255,.97) 22%);
+  }
 }
 
 /* ── Lightbox ──
@@ -713,6 +822,117 @@ button:disabled,
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
 }
 
+/* ── Interstitial ad ──
+   Shown once on arrival. z-24: above the drawers (20) so nothing can be
+   working underneath it, below the profile pages (26) and the loading veil
+   (30) — it is gated on the tour being connected, so the veil has gone by
+   then anyway. */
+.ad-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  pointer-events: none;
+}
+/* The scrim is the dismiss target and covers everything, which is what makes
+   "tap anywhere" true — with a smaller hit area the HUD underneath would take
+   the tap instead and the ad would stay put. */
+.ad-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  border: 0;
+  cursor: default;
+  background: rgba(0, 0, 0, .5);
+  animation: ad-veil .28s ease-out both;
+}
+.ad-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* Centred with the `translate` property, not a transform, so the entrance
+     keyframe can animate `scale` without owning the centring. A keyframe that
+     holds the centring cannot be switched off for reduced motion without the
+     card dropping half its height down the screen. */
+  translate: -50% -50%;
+  width: min(360px, 86vw);
+  /* Scrolls rather than clips: the card carries a photo, a headline and the
+     rewards link, which on a short landscape phone is taller than the space
+     available. */
+  max-height: 86dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+  animation: ad-in .34s cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes ad-veil {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ad-in {
+  from { opacity: 0; scale: .96; }
+  to   { opacity: 1; scale: 1; }
+}
+
+/* ── Profile page ──
+   Full screen, above the drawer, below the loading veil. Opaque rather than
+   translucent: this is a page you stop and read, so the panorama behind it
+   would be noise — and an opaque surface costs nothing to composite, unlike
+   a blur over a repainting 3D scene. */
+.profile {
+  position: absolute;
+  inset: 0;
+  z-index: 26;
+  pointer-events: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg);
+  animation: lightbox-in .2s ease-out both;
+}
+.profile-sheet {
+  position: relative;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 20px calc(40px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Voucher card — the notches are what make it read as a ticket rather than
+   another panel. */
+.ticket {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-1);
+  padding: 22px 18px 18px;
+  overflow: hidden;
+}
+.ticket-on { border-color: var(--brass-line); background: var(--brass-soft); }
+.ticket-rule {
+  display: block;
+  width: 100%;
+  margin: 16px 0 10px;
+  border-top: 1px dashed var(--line-strong);
+}
+/* The two bites out of the sides, level with the dashed rule. */
+.ticket::before,
+.ticket::after {
+  content: "";
+  position: absolute;
+  bottom: 42px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--bg);
+}
+.ticket::before { left: -7px; }
+.ticket::after  { right: -7px; }
+
 /* Flight progress — a hairline sweeping the top of the stage, not a spinner. */
 .flight-bar {
   position: absolute;
@@ -736,4 +956,6 @@ button:disabled,
   .cp { opacity: 1 !important; }
   .flight-bar { animation: none; transform: scaleX(1); }
   .drawer { animation: none; }
+  /* Safe to kill outright — the centring lives on .ad-card, not in ad-in. */
+  .ad-card, .ad-scrim { animation: none; }
 }

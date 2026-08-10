@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { DiscoveredStore } from "@/app/_lib/roster";
+import type { Question } from "@/app/_lib/types";
 import { useGame } from "@/app/_components/GameStateProvider";
 import { StoreLogo } from "@/app/_components/StoreLogo";
+import { RETRY_LIMIT, RETRY_WINDOW_HOURS } from "@/app/_lib/constants";
 
 const FEEDBACK_MS = 2200;
 
@@ -90,7 +98,7 @@ export function QuizDrawer({
           <button
             onClick={onClose}
             aria-label="Fermer"
-            className="w-8 h-8 rounded-full grid place-items-center text-ink-3 hover:text-brass border border-line hover:border-brass-line transition-colors flex-shrink-0"
+            className="w-10 h-10 rounded-full grid place-items-center text-ink-3 hover:text-brass border border-line hover:border-brass-line transition-colors flex-shrink-0"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
@@ -121,15 +129,10 @@ export function QuizDrawer({
           />
         )}
 
-        {/* ── Reward + the promise that the visit is still live ── */}
-        <div className="mt-auto border-t border-line p-5 flex flex-col gap-1">
-          <span className="text-[9.5px] font-medium uppercase tracking-[0.18em] text-ink-3">
-            Débloque
-          </span>
-          <span className="text-[13px] font-semibold text-brass leading-snug">
-            {store.reward}
-          </span>
-          <span className="text-[10.5px] text-ink-3 leading-snug mt-1.5">
+        {/* The reward line lived here; removed on request. `Store.reward` is
+            still carried in the data if it ever comes back. */}
+        <div className="mt-auto border-t border-line px-5 py-4">
+          <span className="text-[10.5px] text-ink-3 leading-snug">
             La visite reste active — déplacez-vous pendant le quiz.
           </span>
         </div>
@@ -151,7 +154,7 @@ function TabButton({
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`flex-1 py-2 rounded-full text-[11.5px] font-semibold tracking-wide transition-colors ${
+      className={`flex-1 py-2.5 min-h-[40px] rounded-full text-[11.5px] font-semibold tracking-wide transition-colors ${
         active ? "bg-brass text-on-brass" : "text-ink-2 hover:text-brass"
       }`}
     >
@@ -299,6 +302,101 @@ export function parseTagText(raw: string): TextPart[] {
 }
 
 /* ══════════════════════════════════════════
+   Retry
+   ══════════════════════════════════════════ */
+
+/** "3 h" / "45 min" — enough to know whether waiting is worth it. */
+function formatWait(ms: number): string {
+  const minutes = Math.max(1, Math.ceil(ms / 60000));
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.ceil(minutes / 60)} h`;
+}
+
+/** The wall-clock time a retry returns, so it isn't only ever relative. */
+function formatClock(at: number): string {
+  return new Date(at).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * The wall clock, as an external store.
+ *
+ * Reading Date.now() during render is impure, and pushing it into state from
+ * an effect is the cascading-render pattern React now flags. `useSyncExternal
+ * Store` is the sanctioned way to read a mutable outside value: the snapshot
+ * is quantised to the tick interval so it stays byte-identical between ticks,
+ * which is what keeps React from re-rendering on every read.
+ */
+function useNow(intervalMs = 30_000): number {
+  return useSyncExternalStore(
+    (onChange) => {
+      const id = setInterval(onChange, intervalMs);
+      return () => clearInterval(id);
+    },
+    () => Math.floor(Date.now() / intervalMs) * intervalMs,
+    () => 0 // server render: unknown, and the caller renders nothing for 0
+  );
+}
+
+function Retry({ store }: { store: DiscoveredStore }) {
+  const { retryStore, retryState } = useGame();
+  const now = useNow();
+
+  // First paint, before the clock effect has run: say nothing rather than
+  // guess at a quota and flash the wrong answer.
+  if (now === 0) return null;
+
+  const { left, nextAt } = retryState(now);
+
+  // Out of retries: say so plainly, and say when they come back. A greyed
+  // button with no explanation reads as a broken feature.
+  if (left === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 max-w-[280px] p-3.5 rounded-xl border border-clay/30 bg-clay-soft">
+        <span className="text-[9.5px] font-medium uppercase tracking-[0.18em] text-clay">
+          Essais épuisés
+        </span>
+        <p className="text-[11.5px] leading-[1.6] text-ink-2">
+          Vous avez utilisé vos {RETRY_LIMIT} essais. Vous ne pourrez
+          recommencer <strong className="text-ink">aucun quiz</strong>, dans
+          aucune boutique,
+          {nextAt ? (
+            <>
+              {" "}
+              avant <strong className="text-ink">{formatWait(nextAt - now)}</strong>{" "}
+              (vers {formatClock(nextAt)}).
+            </>
+          ) : (
+            " pour le moment."
+          )}
+        </p>
+      </div>
+    );
+  }
+
+  const last = left === 1;
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <button onClick={() => retryStore(store.slug)} className="btn btn-fill">
+        Recommencer le quiz
+      </button>
+      <span
+        className={`text-[10.5px] leading-snug max-w-[260px] ${
+          last ? "text-clay" : "text-ink-3"
+        }`}
+      >
+        {last
+          ? `Dernier essai — après celui-ci, plus aucune tentative dans aucune boutique pendant ${RETRY_WINDOW_HOURS} h.`
+          : `${left} essais restants sur ${RETRY_LIMIT}, toutes boutiques confondues — les XP de ce quiz sont repris puis rejoués.`}
+      </span>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
    Quiz
    ══════════════════════════════════════════ */
 
@@ -313,13 +411,25 @@ function QuizPanel({
 }) {
   const { progress } = useGame();
   const [selected, setSelected] = useState<number | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
+  /**
+   * The question being reviewed during the feedback pause.
+   *
+   * Without this the panel jumped a question ahead the instant you answered:
+   * `current` is derived from progress, so answering makes it resolve to the
+   * *next* question while the feedback for the previous one is still on
+   * screen — which rendered the new question with your last pick highlighted
+   * on it, looking as though the quiz had chosen an answer for you.
+   */
+  const [reviewing, setReviewing] = useState<Question | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const questions = store.questions;
-  const current = questions.find((q) => !progress.answeredQuestions[q.id]);
-  const answeredCount = questions.filter(
-    (q) => progress.answeredQuestions[q.id]
+  const pending = questions.find((q) => !progress.answeredQuestions[q.id]);
+  // Hold on the reviewed question until its feedback has run its course.
+  const current = reviewing ?? pending;
+  const showFeedback = reviewing !== null;
+  const correctCount = questions.filter(
+    (q) => progress.answeredQuestions[q.id]?.isCorrect
   ).length;
 
   useEffect(() => {
@@ -329,13 +439,13 @@ function QuizPanel({
   }, []);
 
   const handleAnswer = (index: number) => {
-    if (showFeedback || !current) return;
+    if (reviewing || !pending) return;
     setSelected(index);
-    setShowFeedback(true);
-    onAnswer(current.id, index);
+    setReviewing(pending);
+    onAnswer(pending.id, index);
     timerRef.current = setTimeout(() => {
       setSelected(null);
-      setShowFeedback(false);
+      setReviewing(null);
     }, FEEDBACK_MS);
   };
 
@@ -443,15 +553,15 @@ function QuizPanel({
           )}
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center text-center gap-4 py-10">
+        <div className="flex flex-col items-center justify-center text-center gap-3.5 py-8">
           <span className="eyebrow">Quiz terminé</span>
           <p className="font-display text-[26px] leading-[1.15] text-ink">
-            {answeredCount} / {questions.length} répondues
+            {correctCount} / {questions.length} bonnes réponses
           </p>
-          <p className="text-[12px] leading-[1.6] text-ink-2">
-            Continuez la visite pour découvrir les autres boutiques.
-          </p>
-          <button onClick={onClose} className="btn btn-ghost mt-2">
+
+          <Retry store={store} />
+
+          <button onClick={onClose} className="btn btn-ghost mt-1">
             Reprendre la visite
           </button>
         </div>

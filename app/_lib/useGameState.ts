@@ -2,7 +2,12 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { UserProgress, Badge } from "./types";
-import { STORAGE_KEY, XP_PER_STORE_VISIT } from "./constants";
+import {
+  RETRY_LIMIT,
+  RETRY_WINDOW_MS,
+  STORAGE_KEY,
+  XP_PER_STORE_VISIT,
+} from "./constants";
 import { useLocalStorage } from "./useLocalStorage";
 import {
   buildLevels,
@@ -19,7 +24,26 @@ const DEFAULT_PROGRESS: UserProgress = {
   totalXp: 0,
   unlockedBadges: [],
   completedAt: null,
+  retries: [],
 };
+
+/** Retries still available, and when the next one frees up. */
+export type RetryState = {
+  left: number;
+  /** Epoch ms when a retry returns, or null while some remain. */
+  nextAt: number | null;
+};
+
+function retryStateAt(progress: UserProgress, now: number): RetryState {
+  const recent = (progress.retries ?? []).filter(
+    (t) => now - t < RETRY_WINDOW_MS
+  );
+  const left = Math.max(0, RETRY_LIMIT - recent.length);
+  if (left > 0) return { left, nextAt: null };
+  // The oldest retry in the window is the one that expires first.
+  const oldest = Math.min(...recent);
+  return { left: 0, nextAt: oldest + RETRY_WINDOW_MS };
+}
 
 /**
  * What the model actually offers, pushed in by the tour once its pins resolve.
@@ -166,9 +190,67 @@ export function useGameState() {
     [setProgress, checkBadges]
   );
 
+  /**
+   * Clears one store's answers so its quiz can be taken again.
+   *
+   * The XP those answers earned is handed back at the same time. Without that
+   * a retry would be an XP printing press: answer three correctly, retry,
+   * answer them again, keep the lot. Refunding makes a retry a genuine second
+   * attempt rather than a bonus round — you can only ever bank each question
+   * once.
+   *
+   * Badges already unlocked are left alone. Taking one back would feel like a
+   * punishment for practising, and they're recomputed on the next answer
+   * anyway.
+   */
+  const retryStore = useCallback(
+    (slug: string) => {
+      setProgress((prev) => {
+        const now = Date.now();
+        const recent = (prev.retries ?? []).filter(
+          (t) => now - t < RETRY_WINDOW_MS
+        );
+        if (recent.length >= RETRY_LIMIT) return prev;
+
+        const storeQuestions = QUESTIONS.filter((q) => q.storeSlug === slug);
+        const answers = { ...prev.answeredQuestions };
+        let refund = 0;
+
+        for (const question of storeQuestions) {
+          const answer = answers[question.id];
+          if (!answer) continue;
+          if (answer.isCorrect) refund += question.xpReward;
+          delete answers[question.id];
+        }
+        if (refund === 0 && storeQuestions.every((q) => !prev.answeredQuestions[q.id])) {
+          return prev; // nothing to retry — don't spend a life
+        }
+
+        return {
+          ...prev,
+          answeredQuestions: answers,
+          totalXp: Math.max(0, prev.totalXp - refund),
+          retries: [...recent, now],
+        };
+      });
+    },
+    [setProgress]
+  );
+
   const reset = useCallback(() => {
     removeProgress();
   }, [removeProgress]);
+
+  /**
+   * Takes `now` from the caller rather than reading the clock itself: the
+   * quota is a rolling window, so a retry becomes available with no state
+   * change to react to, and a component that wants a live countdown has to
+   * own the ticking anyway.
+   */
+  const retryState = useCallback(
+    (now: number) => retryStateAt(progress, now),
+    [progress]
+  );
 
   const levels = buildLevels(maxXp);
   const level = calculateLevel(progress.totalXp, levels);
@@ -180,6 +262,8 @@ export function useGameState() {
     isHydrated,
     exploreStore,
     answerQuestion,
+    retryStore,
+    retryState,
     reset,
     syncRoster,
     level,

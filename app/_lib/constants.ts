@@ -1,7 +1,7 @@
 /**
  * The mall's levels.
  *
- * Anfa Place is not one multi-storey Matterport model — it is two separate
+ * Smart Mall is not one multi-storey Matterport model — it is two separate
  * scans, one per level, each with its own space id, its own sweeps and its
  * own pins. That is why `Floor.data` reports a single floor however hard you
  * ask it: from inside a space, the other level does not exist.
@@ -65,6 +65,18 @@ const SHOWCASE_PARAMS: Record<string, string | number> = {
   vr: 0, // no VR button
   hr: 0, // no highlight reel (older alias; harmless if ignored)
   lang: "fr",
+  /**
+   * Listing-compliance mode: 2 is documented as "MLS friendly without the
+   * top-left panel" — the contact / call-to-action card. That card is what
+   * renders the "Débloquer mes Récompenses" button, and it is invisible to
+   * the SDK (Tag.openTags reports nothing), so this param is the only thing
+   * that actually removes it rather than covering it.
+   *
+   * It was here once and I took it out while hunting the missing upper floor,
+   * on the theory that it might be restricting the model. It wasn't — the
+   * missing floor was a second scan entirely.
+   */
+  mls: 2,
   // Removed on purpose — each of these restricts what the model exposes, not
   // just what it draws, and `mt: 0` already cost us most of the pins once:
   //   dh: 0  / f: 0   may disable dollhouse and floorplan outright. `f` is as
@@ -107,6 +119,15 @@ export const STORAGE_KEY = "mallquest_progress_v2";
 
 export const XP_PER_STORE_VISIT = 10;
 export const XP_PER_QUESTION = 30;
+
+/**
+ * Quiz retries allowed inside any rolling window. Rolling, not a counter that
+ * resets on the hour — otherwise the quota can be gamed by waiting for the
+ * boundary and spending six attempts across it.
+ */
+export const RETRY_LIMIT = 3;
+export const RETRY_WINDOW_HOURS = 12;
+export const RETRY_WINDOW_MS = RETRY_WINDOW_HOURS * 60 * 60 * 1000;
 
 /**
  * Levels as fractions of the maximum XP actually achievable in this model,

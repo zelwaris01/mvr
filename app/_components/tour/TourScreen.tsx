@@ -16,12 +16,29 @@ import { useGame } from "@/app/_components/GameStateProvider";
 import { CheckpointLayer } from "./CheckpointLayer";
 import { QuizDrawer } from "./QuizDrawer";
 import { BadgeOverlay } from "./BadgeOverlay";
+import { RewardsOverlay } from "./RewardsOverlay";
+import { PromoFlyout } from "./PromoFlyout";
+import { ToolsMenu } from "./ToolsMenu";
+import { TapDebug } from "./TapDebug";
+import { AdIntro } from "./AdIntro";
 import { SideRail, StoreRail, TourMenu, TourTopBar, TourVeil } from "./TourHud";
 
 const FLIGHT_MS = 1600;
 const FLIGHT_MS_REDUCED = 400;
-/** Must match `.drawer { width }` closely enough to cull markers behind it. */
-const DRAWER_W = 420;
+/**
+ * How much of the right edge the open panel actually covers.
+ *
+ * This was a flat 420 while `.drawer` was `min(420px, 92vw)`. On a 360px
+ * phone that made the engine's `right = width - 420` negative, so with
+ * CULL_MARGIN it hid *every* marker the moment a panel opened. And below
+ * 640px the panel is now a bottom sheet, covering nothing on the right at
+ * all — hence 0.
+ */
+function drawerInset(): number {
+  if (typeof window === "undefined") return 0;
+  if (window.innerWidth < 640) return 0; // bottom sheet
+  return Math.min(420, window.innerWidth * 0.92);
+}
 
 export function TourScreen() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -34,6 +51,17 @@ export function TourScreen() {
 
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [badgesOpen, setBadgesOpen] = useState(false);
+  const [rewardsOpen, setRewardsOpen] = useState(false);
+  /**
+   * Offres was open on arrival while it was a small side flyout — the ad
+   * inside it is the point. It is now a full-screen page (a floating panel
+   * over the iframe could not be tapped on touch), and a full-screen ad wall
+   * on arrival would hide the tour instead of sitting beside it. So it opens
+   * from the rail rather than on load.
+   */
+  const [offersOpen, setOffersOpen] = useState(false);
+  /** Phones: the burger's tools page, standing in for the side rail. */
+  const [toolsOpen, setToolsOpen] = useState(false);
   /** Enlarged shop photo. Lives here so it can sit above the drawer. */
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [flyingSlug, setFlyingSlug] = useState<string | null>(null);
@@ -51,6 +79,7 @@ export function TourScreen() {
   // ── The visit ──
   const openStore = useCallback((slug: string) => {
     setBadgesOpen(false);
+    setRewardsOpen(false);
     setActiveSlug(slug);
   }, []);
 
@@ -91,7 +120,7 @@ export function TourScreen() {
 
   // Markers hidden behind the drawer stop doing per-frame work.
   useEffect(() => {
-    setDrawerInset(activeSlug || badgesOpen ? DRAWER_W : 0);
+    setDrawerInset(activeSlug || badgesOpen ? drawerInset() : 0);
   }, [activeSlug, badgesOpen, setDrawerInset]);
 
   const doneSlugs = useMemo(() => {
@@ -267,6 +296,13 @@ export function TourScreen() {
     }
   }, [mapMode, sdkRef]);
 
+  /** Shared by the desktop rail and the phone tools page. */
+  const openBadges = useCallback(() => {
+    setActiveSlug(null);
+    setRewardsOpen(false);
+    setBadgesOpen(true);
+  }, []);
+
   const activeStore = roster.find((s) => s.slug === activeSlug) ?? null;
 
   /**
@@ -274,13 +310,18 @@ export function TourScreen() {
    * play — removing it the instant status flips would cut Matterport's loading
    * screen back into view for a frame.
    */
-  const [veilRetired, setVeilRetired] = useState(false);
-  useEffect(() => {
-    if (status === "connecting") return;
-    const t = setTimeout(() => setVeilRetired(true), 700);
-    return () => clearTimeout(t);
-  }, [status]);
-  const veilMounted = !veilRetired;
+  // The veil owns its own lifetime; this only tracks whether the wordmark has
+  // finished flying into the top bar, which happens once.
+  const [markVisible, setMarkVisible] = useState(false);
+  const handleVeilRetired = useCallback(() => setMarkVisible(true), []);
+
+  // `?tap=1` only. Read once, from the URL rather than from state, so the
+  // readout costs nothing at all on a normal visit.
+  const [tapDebug] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).has("tap")
+  );
 
   return (
     <div ref={stageRef} className="stage">
@@ -288,7 +329,7 @@ export function TourScreen() {
           re-point an existing one, so the SDK cannot attach to a stale
           document mid-swap. */}
       <iframe
-        key={level.id}
+        key={`frame-${level.id}`}
         ref={iframeRef}
         src={tourUrlFor(level.id)}
         className="stage-frame"
@@ -301,9 +342,17 @@ export function TourScreen() {
           removes: the control bar along the bottom and the wordmark top-left.
           Both sit above the iframe and below the HUD. */}
       <div className="chrome-mask" aria-hidden />
-      <div className="chrome-mask-tl" aria-hidden />
+      <div className="chrome-mask-top" aria-hidden />
 
-      {veilMounted && <TourVeil leaving={status !== "connecting"} />}
+      {/* Keyed on the level: switching floor loads a different scan, so the
+          veil must come back and cover that load too. */}
+      {/* Keys are prefixed because this and the iframe are siblings keyed on
+          the same space id — identical keys among siblings is a React error. */}
+      <TourVeil
+        key={`veil-${level.id}`}
+        status={status}
+        onRetired={handleVeilRetired}
+      />
 
       {flyingSlug && (
         <div
@@ -314,15 +363,29 @@ export function TourScreen() {
 
       <div className="hud">
         {/* Held back until the veil's wordmark has flown into this spot. */}
-        <TourTopBar markVisible={veilRetired} />
+        <TourTopBar
+          markVisible={markVisible}
+          onOpenRewards={() => {
+            // One translucent surface over the live scene at a time.
+            setActiveSlug(null);
+            setBadgesOpen(false);
+            setRewardsOpen(true);
+          }}
+          onOpenTools={() => {
+            setActiveSlug(null);
+            setBadgesOpen(false);
+            setRewardsOpen(false);
+            setToolsOpen(true);
+          }}
+        />
 
-        {status === "ready" && !mapBroken && (
+        {status === "ready" && (
           <SideRail
             onMap={toggleMap}
-            onBadges={() => {
-              setActiveSlug(null);
-              setBadgesOpen(true);
-            }}
+            onBadges={openBadges}
+            onOffers={() => setOffersOpen((v) => !v)}
+            offersActive={offersOpen}
+            mapBroken={mapBroken}
             mapDisabled={flyingSlug !== null}
             mapActive={mapMode}
             levels={MATTERPORT_LEVELS}
@@ -331,6 +394,30 @@ export function TourScreen() {
             floorsDisabled={flyingSlug !== null}
           />
         )}
+
+        {toolsOpen && status === "ready" && (
+          <ToolsMenu
+            onClose={() => setToolsOpen(false)}
+            onMap={toggleMap}
+            onBadges={openBadges}
+            onOffers={() => setOffersOpen(true)}
+            mapBroken={mapBroken}
+            mapDisabled={flyingSlug !== null}
+            mapActive={mapMode}
+            levels={MATTERPORT_LEVELS}
+            currentLevel={levelIndex}
+            onLevel={goToLevel}
+            floorsDisabled={flyingSlug !== null}
+          />
+        )}
+
+        {offersOpen && status === "ready" && (
+          <PromoFlyout onClose={() => setOffersOpen(false)} />
+        )}
+
+        {/* Held until the veil has retired, so the ad lands on the scene
+            rather than on Matterport's loading screen. */}
+        {status === "ready" && markVisible && <AdIntro />}
 
         <CheckpointLayer
           stores={roster}
@@ -365,6 +452,13 @@ export function TourScreen() {
 
         {badgesOpen && <BadgeOverlay onClose={() => setBadgesOpen(false)} />}
 
+        {rewardsOpen && (
+          <RewardsOverlay
+            roster={roster}
+            onClose={() => setRewardsOpen(false)}
+          />
+        )}
+
         {status === "ready" && <TourMenu />}
 
         <TourStatusNote status={status} rosterCount={roster.length} />
@@ -373,6 +467,8 @@ export function TourScreen() {
           <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
         )}
       </div>
+
+      {tapDebug && <TapDebug />}
     </div>
   );
 }

@@ -11,7 +11,7 @@ import type { Store } from "./types";
  * So adding a store here does nothing on its own; tagging it in Matterport
  * Workshop is what puts it on screen.
  *
- * ⚠ Placeholder content throughout, pending real copy from Anfa Place:
+ * ⚠ Placeholder content throughout, pending real copy from Smart Mall:
  * descriptions and rewards are invented, and the `image` thumbnails are
  * generic stock photography that does not depict these shops. They are
  * decorative only — nothing reads them except the brand rail.
@@ -127,7 +127,7 @@ export const STORES: Store[] = [
   {
     slug: "alti",
     name: "ALTI",
-    description: "Enseigne du premier étage d'Anfa Place.",
+    description: "Enseigne du premier étage de Smart Mall.",
     category: "Mode",
     reward: "-10% sur votre premier achat",
     image:
@@ -144,6 +144,15 @@ export const STORES: Store[] = [
   },
 
   /* ── Balisées au rez-de-chaussée (scan iGiPWMPBMdw) ── */
+  {
+    slug: "lnko",
+    name: "LNKO",
+    description: "Magasin d'optique — lunettes de vue et solaires.",
+    category: "Optique",
+    reward: "-15% sur la seconde paire",
+    image:
+      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=160&h=160&fit=crop",
+  },
   {
     slug: "springfield",
     name: "SPRINGFIELD",

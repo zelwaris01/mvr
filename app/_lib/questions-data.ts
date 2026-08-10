@@ -11,7 +11,7 @@ import { XP_PER_QUESTION } from "./constants";
  * ⚠ The questions carrying a `// placeholder` marker were written from public
  * knowledge of the brands to reach three per store. They are plausible and
  * fact-checked as far as public sources go, but they have NOT been approved by
- * Anfa Place. Review before launch.
+ * Smart Mall. Review before launch.
  */
 export const QUESTIONS: Question[] = [
   // ── ZARA ──
@@ -309,6 +309,49 @@ export const QUESTIONS: Question[] = [
     xpReward: XP_PER_QUESTION,
   },
 
+  /* ── LNKO ──
+     ⚠ L'enseigne se présente comme « magasin d'optique » sur sa devanture,
+     visible dans le scan. Les questions s'appuient sur cela et sur la visite
+     elle-même ; à faire valider par Smart Mall. */
+  {
+    id: "lnko-1",
+    storeSlug: "lnko",
+    questionText: "Quelle est la spécialité de LNKO ?",
+    options: [
+      "L'optique et les lunettes",
+      "La boulangerie",
+      "Le prêt-à-porter",
+      "La téléphonie",
+    ],
+    correctIndex: 0,
+    explanation:
+      "LNKO se présente comme magasin d'optique sur sa devanture.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "lnko-2",
+    storeSlug: "lnko",
+    questionText: "À quel niveau du mall se trouve LNKO ?",
+    options: ["Rez-de-chaussée", "Premier étage", "Sous-sol", "Terrasse"],
+    correctIndex: 0,
+    explanation: "LNKO se trouve au rez-de-chaussée, dans la galerie.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "lnko-3", // ⚠ espace-réservé — contenu à fournir
+    storeSlug: "lnko",
+    questionText: "Que peut-on faire chez un opticien comme LNKO ?",
+    options: [
+      "Faire contrôler sa vue",
+      "Faire réparer son téléphone",
+      "Retirer de l'argent",
+      "Acheter du pain",
+    ],
+    correctIndex: 0,
+    explanation: "À compléter avec les services proposés par l'enseigne.",
+    xpReward: XP_PER_QUESTION,
+  },
+
   // ── SPRINGFIELD ──
   {
     id: "springfield-1",
@@ -395,7 +438,7 @@ export const QUESTIONS: Question[] = [
      d'aucune information fiable à leur sujet. Plutôt que d'inventer des
      faits, la première question de chaque série porte sur la visite
      elle-même (le niveau), ce qui est vérifiable en se déplaçant. Les
-     deux suivantes sont des ESPACE-RÉSERVÉS à remplacer par Anfa Place
+     deux suivantes sont des ESPACE-RÉSERVÉS à remplacer par Smart Mall
      avant toute mise en ligne — ne pas publier en l'état.
      ──────────────────────────────────────────────────────────────────── */
   {
@@ -500,7 +543,7 @@ export const QUESTIONS: Question[] = [
     questionText: "À quel niveau du mall se trouve ALTI ?",
     options: ["Rez-de-chaussée", "Premier étage", "Sous-sol", "Terrasse"],
     correctIndex: 1,
-    explanation: "ALTI se trouve au premier étage d'Anfa Place.",
+    explanation: "ALTI se trouve au premier étage de Smart Mall.",
     xpReward: XP_PER_QUESTION,
   },
   {
@@ -518,7 +561,7 @@ export const QUESTIONS: Question[] = [
     questionText: "Depuis quel étage accède-t-on à ALTI ?",
     options: ["Par la galerie du premier", "Par le parking", "Par la terrasse", "Par le sous-sol"],
     correctIndex: 0,
-    explanation: "À compléter avec les informations d'Anfa Place.",
+    explanation: "À compléter avec les informations de Smart Mall.",
     xpReward: XP_PER_QUESTION,
   },
 

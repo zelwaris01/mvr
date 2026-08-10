@@ -42,6 +42,22 @@ export default function RootLayout({
       className={`${archivo.variable} ${instrumentSerif.variable} antialiased`}
       suppressHydrationWarning
     >
+      {/* The tour cannot start until four separate origins have been resolved,
+          connected and TLS-negotiated, and none of them is touched until React
+          has mounted and the iframe exists. Warming the connections during
+          HTML parse takes those round trips off the critical path — on a phone
+          on mobile data that is the difference between one and two seconds
+          before Matterport even begins downloading the model. */}
+      <head>
+        <link rel="preconnect" href="https://my.matterport.com" />
+        <link rel="preconnect" href="https://static.matterport.com" />
+        <link rel="preconnect" href="https://cdn-2.matterport.com" />
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        {/* For browsers that ignore preconnect but honour this. */}
+        <link rel="dns-prefetch" href="https://my.matterport.com" />
+        <link rel="dns-prefetch" href="https://static.matterport.com" />
+        <link rel="dns-prefetch" href="https://cdn-2.matterport.com" />
+      </head>
       {/* The visit fills the viewport and nothing scrolls the document —
           every surface is a floating overlay above the panorama. */}
       <body className="h-dvh overflow-hidden bg-bg text-ink">

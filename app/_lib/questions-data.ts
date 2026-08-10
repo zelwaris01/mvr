@@ -592,6 +592,146 @@ export const QUESTIONS: Question[] = [
     explanation: "À compléter avec le calendrier d'animation du centre.",
     xpReward: XP_PER_QUESTION,
   },
+
+  /* ── ENSEIGNES DU REZ-DE-CHAUSSÉE AJOUTÉES D'APRÈS LE SCAN ──
+     Questions portant sur le métier de l'enseigne, pas sur son histoire : ce
+     que vend la boutique se lit sur sa devanture, une date de fondation
+     s'invente. RAZANA, DUO ZOU LU et LES UNIVERS DU CARROUSEL n'ont pas de
+     questions ici — leur activité n'est pas établie, et le quiz affiche un
+     état « bientôt disponible » plutôt qu'une question fausse. */
+
+  // ── ELECTROPLANET ──
+  {
+    id: "electroplanet-1", // placeholder
+    storeSlug: "electroplanet",
+    questionText: "Que trouve-t-on principalement chez ELECTROPLANET ?",
+    options: [
+      "Des vêtements",
+      "De l'électroménager et du high-tech",
+      "Des livres",
+      "Des meubles de jardin",
+    ],
+    correctIndex: 1,
+    explanation:
+      "ELECTROPLANET est une enseigne d'électroménager, de multimédia et de produits high-tech.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "electroplanet-2", // placeholder
+    storeSlug: "electroplanet",
+    questionText:
+      "Lequel de ces rayons vous attendez-vous à trouver chez ELECTROPLANET ?",
+    options: [
+      "Boulangerie",
+      "Parfumerie",
+      "Téléphonie et informatique",
+      "Bijouterie",
+    ],
+    correctIndex: 2,
+    explanation:
+      "Téléphonie, informatique, image et son constituent le cœur de l'offre.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "electroplanet-3", // placeholder
+    storeSlug: "electroplanet",
+    questionText:
+      "Quel service accompagne le plus souvent l'achat d'un gros appareil ?",
+    options: [
+      "La livraison et l'installation",
+      "La retouche",
+      "L'emballage cadeau uniquement",
+      "Le pressing",
+    ],
+    correctIndex: 0,
+    explanation:
+      "Les gros appareils s'accompagnent d'une livraison et, selon le produit, d'une installation.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── PLANET SPORT ──
+  {
+    id: "planet-sport-1", // placeholder
+    storeSlug: "planet-sport",
+    questionText: "Quelle famille de produits PLANET SPORT propose-t-elle ?",
+    options: [
+      "Des articles de sport",
+      "Des produits d'épicerie",
+      "Des articles de puériculture",
+      "De la décoration",
+    ],
+    correctIndex: 0,
+    explanation:
+      "L'enseigne réunit équipement, textile et chaussures de sport.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "planet-sport-2", // placeholder
+    storeSlug: "planet-sport",
+    questionText:
+      "Pour courir régulièrement, quel critère compte le plus dans le choix d'une chaussure ?",
+    options: [
+      "La couleur",
+      "L'amorti et le maintien",
+      "La marque uniquement",
+      "Le poids du carton",
+    ],
+    correctIndex: 1,
+    explanation:
+      "L'amorti et le maintien protègent les articulations sur la distance.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "planet-sport-3", // placeholder
+    storeSlug: "planet-sport",
+    questionText: "Lequel de ces articles relève du rayon fitness ?",
+    options: [
+      "Un tapis de yoga",
+      "Une théière",
+      "Un cartable",
+      "Un abat-jour",
+    ],
+    correctIndex: 0,
+    explanation: "Le tapis de yoga fait partie de l'équipement fitness.",
+    xpReward: XP_PER_QUESTION,
+  },
+
+  // ── FACES ──
+  {
+    id: "faces-1", // placeholder
+    storeSlug: "faces",
+    questionText: "Quel univers FACES représente-t-elle ?",
+    options: ["Le sport", "La beauté", "L'ameublement", "L'optique"],
+    correctIndex: 1,
+    explanation:
+      "FACES est une enseigne de beauté : maquillage, parfums et soins.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "faces-2", // placeholder
+    storeSlug: "faces",
+    questionText: "Lequel de ces produits relève du maquillage ?",
+    options: ["Un mascara", "Un shampoing", "Un déodorant", "Un dentifrice"],
+    correctIndex: 0,
+    explanation:
+      "Le mascara est un produit de maquillage ; les autres relèvent de l'hygiène.",
+    xpReward: XP_PER_QUESTION,
+  },
+  {
+    id: "faces-3", // placeholder
+    storeSlug: "faces",
+    questionText: "Que désigne un « soin visage » en parfumerie ?",
+    options: [
+      "Une coupe de cheveux",
+      "Un produit ou un rituel dédié à la peau du visage",
+      "Un massage des pieds",
+      "Une retouche de vêtement",
+    ],
+    correctIndex: 1,
+    explanation:
+      "Le soin visage regroupe nettoyants, sérums et crèmes destinés à la peau du visage.",
+    xpReward: XP_PER_QUESTION,
+  },
 ];
 
 /**

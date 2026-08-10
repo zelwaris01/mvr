@@ -820,6 +820,55 @@ button:disabled,
   object-fit: contain;
   border-radius: 10px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  /* Above the scrim, so the photo itself is not a dismiss target — you can
+     rest a thumb on it while reading without the viewer closing. */
+  position: relative;
+  z-index: 1;
+}
+/* A real element rather than a click handler on the container: on touch the
+   dismiss has to go through the tap router, which resolves what was hit by
+   position, so the backdrop needs to *be* something. It also means the arrows
+   need no stopPropagation — they are siblings, not children. */
+.lightbox-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  z-index: 2;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--ink-2);
+  background: rgba(11, 10, 9, .72);
+  border: 1px solid var(--line);
+  transition: color .18s, border-color .18s;
+}
+.lightbox-nav:hover { color: var(--brass); border-color: var(--brass-line); }
+.lightbox-nav-prev { left: max(12px, env(safe-area-inset-left, 0px)); }
+.lightbox-nav-next { right: max(12px, env(safe-area-inset-right, 0px)); }
+.lightbox-count {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  z-index: 2;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(11, 10, 9, .72);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Interstitial ad ──

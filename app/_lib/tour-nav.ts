@@ -123,6 +123,11 @@ export async function aimAt(
   size: { w: number; h: number }
 ): Promise<void> {
   if (size.w === 0 || size.h === 0) return;
+  // A pin can carry a degenerate anchor — `worldToScreen` then reports NaN,
+  // the correction computes to NaN, and `Camera.rotate` throws "xAngle must
+  // be a finite number", aborting the arrival mid-flight. Not aiming is a far
+  // better outcome than not arriving.
+  if (!isFinite(target.x) || !isFinite(target.y) || !isFinite(target.z)) return;
 
   const APPROX_HFOV_DEG = 65; // only sets the step size; the loop corrects it
   const TOLERANCE = size.w * 0.035;
@@ -143,6 +148,7 @@ export async function aimAt(
     }
 
     const error = scratch.x - size.w / 2;
+    if (!isFinite(error)) return; // projection failed — leave the camera be
     if (Math.abs(error) <= TOLERANCE) return;
 
     // Got worse after a turn? The convention runs the other way.

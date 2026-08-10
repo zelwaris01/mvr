@@ -35,7 +35,7 @@ export function QuizDrawer({
   store: DiscoveredStore;
   onClose: () => void;
   /** Raised to the screen, which owns the lightbox — see the note in globals.css. */
-  onOpenImage: (src: string) => void;
+  onOpenImage: (images: string[], start: number) => void;
 }) {
   const { progress, answerQuestion } = useGame();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -172,7 +172,7 @@ function StorePanel({
   onOpenImage,
 }: {
   store: DiscoveredStore;
-  onOpenImage: (src: string) => void;
+  onOpenImage: (images: string[], start: number) => void;
 }) {
   const parts = useMemo(() => parseTagText(store.tagText), [store.tagText]);
 
@@ -191,7 +191,7 @@ function StorePanel({
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => onOpenImage(store.gallery[0])}
+            onClick={() => onOpenImage(store.gallery, 0)}
             title="Agrandir"
             className="h-[132px] w-full rounded-xl bg-surface-1 border border-line grid place-items-center overflow-hidden hover:border-brass-line transition-colors"
           >
@@ -209,7 +209,7 @@ function StorePanel({
                 <button
                   key={src}
                   type="button"
-                  onClick={() => onOpenImage(src)}
+                  onClick={() => onOpenImage(store.gallery, i + 1)}
                   title="Agrandir"
                   className="aspect-square rounded-lg bg-surface-1 border border-line overflow-hidden hover:border-brass-line transition-colors"
                 >
@@ -451,6 +451,30 @@ function QuizPanel({
 
   const questionIndex = current ? questions.indexOf(current) : questions.length;
   const isCorrect = current ? selected === current.correctIndex : false;
+
+  // A shop tagged in the model that has no questions yet. Without this it
+  // falls through to the completion screen and congratulates the visitor on
+  // "0 / 0 bonnes réponses", with a retry button that has nothing to retry.
+  if (questions.length === 0) {
+    return (
+      <div className="flex flex-col items-center text-center gap-3 px-5 pb-8 pt-4">
+        <span className="w-11 h-11 rounded-full grid place-items-center bg-surface-2 text-ink-3">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4" /><line x1="12" y1="17.5" x2="12" y2="17.5" strokeWidth="2.5" strokeLinecap="round" /></svg>
+        </span>
+        <p className="text-[13px] font-semibold text-ink leading-none">
+          Quiz bientôt disponible
+        </p>
+        <p className="text-[11.5px] leading-[1.6] text-ink-3 max-w-[260px]">
+          Cette boutique vient d&apos;être ajoutée à la visite. Ses questions
+          arrivent prochainement — la visiter compte déjà dans votre
+          progression.
+        </p>
+        <button onClick={onClose} className="btn btn-ghost mt-1">
+          Reprendre la visite
+        </button>
+      </div>
+    );
+  }
 
   return (
     // Natural height, not flex-1 — see the note in StorePanel.

@@ -22,6 +22,7 @@ import { ToolsMenu } from "./ToolsMenu";
 import { TapDebug } from "./TapDebug";
 import { AdIntro } from "./AdIntro";
 import { SideRail, StoreRail, TourMenu, TourTopBar, TourVeil } from "./TourHud";
+import { usePress } from "@/app/_lib/usePress";
 
 const FLIGHT_MS = 1600;
 const FLIGHT_MS_REDUCED = 400;
@@ -63,7 +64,14 @@ export function TourScreen() {
   /** Phones: the burger's tools page, standing in for the side rail. */
   const [toolsOpen, setToolsOpen] = useState(false);
   /** Enlarged shop photo. Lives here so it can sit above the drawer. */
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{
+    images: string[];
+    start: number;
+  } | null>(null);
+  const openImage = useCallback(
+    (images: string[], start: number) => setLightbox({ images, start }),
+    []
+  );
   const [flyingSlug, setFlyingSlug] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState(false);
   const [mapBroken, setMapBroken] = useState(false);
@@ -446,7 +454,7 @@ export function TourScreen() {
             key={activeStore.slug}
             store={activeStore}
             onClose={() => setActiveSlug(null)}
-            onOpenImage={setLightbox}
+            onOpenImage={openImage}
           />
         )}
 
@@ -464,7 +472,11 @@ export function TourScreen() {
         <TourStatusNote status={status} rosterCount={roster.length} />
 
         {lightbox && (
-          <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
+          <Lightbox
+            images={lightbox.images}
+            start={lightbox.start}
+            onClose={() => setLightbox(null)}
+          />
         )}
       </div>
 
@@ -473,29 +485,87 @@ export function TourScreen() {
   );
 }
 
-/** A shop photo at full size, without leaving the visit. */
-function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+/**
+ * The shop's photos at full size, without leaving the visit.
+ *
+ * A gallery rather than a single image: the pin carries every photo the shop
+ * has, so arriving from one thumbnail should not strand you there. Left and
+ * right wrap around — from the last photo, right returns to the first.
+ */
+function Lightbox({
+  images,
+  start,
+  onClose,
+}: {
+  images: string[];
+  start: number;
+  onClose: () => void;
+}) {
+  const [index, setIndex] = useState(start);
+  const count = images.length;
+
+  // Modulo with a `+ count` so a left arrow off the first photo lands on the
+  // last rather than on NaN — a bare `-1 % 3` is -1 in JavaScript.
+  const step = useCallback(
+    (delta: number) => setIndex((i) => (i + delta + count) % count),
+    [count]
+  );
+
+  const prevPress = usePress(() => step(-1));
+  const nextPress = usePress(() => step(1));
+  const closePress = usePress(onClose);
+  const scrimPress = usePress(onClose);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") step(1);
+      else if (e.key === "ArrowLeft") step(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, step]);
 
   return (
-    <div
-      className="lightbox"
-      role="dialog"
-      aria-label="Image agrandie"
-      onClick={onClose}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" onClick={(e) => e.stopPropagation()} />
+    <div className="lightbox" role="dialog" aria-label="Image agrandie">
       <button
-        onClick={onClose}
+        {...scrimPress}
         aria-label="Fermer l'image"
-        className="absolute top-4 right-4 w-10 h-10 rounded-full pane grid place-items-center text-ink-2 hover:text-brass transition-colors"
+        tabIndex={-1}
+        className="lightbox-scrim"
+      />
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={images[index]} alt="" />
+
+      {/* Arrow keys are the ask, but a phone has none — the same navigation
+          has to be reachable by thumb. */}
+      {count > 1 && (
+        <>
+          <button
+            {...prevPress}
+            aria-label="Image précédente"
+            className="lightbox-nav lightbox-nav-prev"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
+          <button
+            {...nextPress}
+            aria-label="Image suivante"
+            className="lightbox-nav lightbox-nav-next"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
+          <span className="lightbox-count">
+            {index + 1} / {count}
+          </span>
+        </>
+      )}
+
+      <button
+        {...closePress}
+        aria-label="Fermer l'image"
+        className="absolute top-4 right-4 z-[2] w-10 h-10 rounded-full pane grid place-items-center text-ink-2 hover:text-brass transition-colors"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
       </button>

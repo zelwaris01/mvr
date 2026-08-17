@@ -302,18 +302,9 @@ button:disabled,
   }
 }
 
-/* ── Horizontal rail ──
-   Everything that scrolls sideways. `proximity` snapping tidies a flick up
-   against the nearest card without fighting a deliberate half-scroll the way
-   `mandatory` does, and containing the overscroll stops a rail that has hit
-   its end from scrolling the page behind it — or from firing the browser's
-   back-swipe gesture on a trackpad. */
-.rail {
-  scroll-snap-type: x proximity;
-  overscroll-behavior-x: contain;
-  scroll-padding-inline: 4px;
-}
-.rail > * { scroll-snap-align: start; }
+/* `.rail` lived here — snap and overscroll rules for the strip of store chips
+   that ran along the bottom edge. The directory panel replaced it, and nothing
+   in the app scrolls sideways any more, so the rules went with it. */
 
 /* ── Safe area ──
    Margins, not padding. The old `.safe-area-pb` set padding-bottom, which put
@@ -362,35 +353,17 @@ button:disabled,
 .stage-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
 /* ── Chrome mask ──
-   Matterport's control bar lives inside a cross-origin iframe: it cannot be
-   restyled, repositioned or hidden with CSS, the SDK exposes no toggle for it,
-   and the URL params that were supposed to remove it don't cover every button.
-   So it gets covered instead.
-   `pointer-events: auto` is the point — a purely visual scrim would hide the
-   buttons while leaving them clickable, which is worse than not hiding them.
-   This costs the bottom ~104px as a click-to-walk surface; the brand rail
-   already occupied that strip, and walking clicks land on floor further ahead. */
-.chrome-mask {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* Tall enough to stay behind the brand rail, but capped as a share of the
-     viewport: at fixed heights the two masks took 240px, which on a 360px-tall
-     landscape phone is two thirds of the screen and leaves almost nothing to
-     drag. Matterport's chrome may peek out in landscape — an acceptable trade
-     against an unusable visit. */
-  height: min(112px, 20dvh);
-  z-index: 5;                /* above the iframe, below the HUD */
-  pointer-events: auto;
-  background: linear-gradient(
-    to top,
-    var(--bg) 0%,
-    var(--bg) 52%,
-    color-mix(in srgb, var(--bg) 70%, transparent) 78%,
-    transparent 100%
-  );
-}
+   `.chrome-mask` lived here: a 112px dark fade along the bottom edge covering
+   Matterport's control bar, which lives in a cross-origin iframe and cannot be
+   restyled, repositioned or hidden with CSS.
+
+   Removed on request — it read as a shadow across the bottom of every view.
+   The consequence is real rather than theoretical: Matterport's own buttons
+   may now be visible along that edge, and they are clickable, because the mask
+   was also what intercepted those clicks. Bring it back if they show.
+
+   The top band below is unaffected; it covers the Matterport wordmark and is
+   where our own wordmark sits. */
 
 /* Top-left corner: the Matterport wordmark. Same reasoning as the bottom
    deck, and `pointer-events: auto` matters twice as much here — that logo is
@@ -451,39 +424,55 @@ button:disabled,
   align-items: center;
   gap: 5px;
 }
-/* The hand-off: the wordmark flies from the centre of the screen to exactly
-   where TourTopBar's copy sits, shrinking 34px -> 26px on the way. The real
-   one fades in underneath as this lands, so the swap is invisible. */
+/* The hand-off: the title flies from the centre of the screen to exactly where
+   TourTopBar's copy sits, shrinking 32px -> 20px on the way (24 -> 15 below
+   `sm`; both are the same .625 ratio, which is why one scale covers both). The
+   real one fades in underneath as this lands, so the swap is invisible. */
 .tour-veil-out .veil-mark {
   animation: mark-fly .7s cubic-bezier(.7, 0, .2, 1) forwards;
 }
 @keyframes mark-fly {
-  to { transform: translateY(calc(-50dvh + 42px)) scale(.765); }
+  to { transform: translateY(calc(-50dvh + 42px)) scale(.625); }
 }
 
 .veil-bar {
-  margin-top: 14px;
+  margin-top: 16px;
   width: 132px;
-  height: 1px;
+  height: 2px;
   background: var(--line);
   position: relative;
   overflow: hidden;
+  border-radius: 1px;
   transition: opacity .25s ease;
 }
-.tour-veil-out .veil-bar { opacity: 0; }
-.veil-bar::after {
-  content: "";
+/* Determinate, and driven from React: --veil-pct is the ceiling of whichever
+   App.Phase the player is in and --veil-ms is roughly how long that phase
+   lasts, so the fill is still easing toward its target for the whole of it.
+   The previous 1.5s looping sweep was the same picture at second one and
+   second nine, which is what made a ten-second load feel like a stall. */
+.veil-bar-fill {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--veil-pct, 5%);
   background: var(--brass);
-  transform-origin: left center;
-  animation: veil-sweep 1.5s ease-in-out infinite;
+  border-radius: inherit;
+  transition: width var(--veil-ms, 1s) cubic-bezier(.25, .8, .35, 1);
 }
-@keyframes veil-sweep {
-  0%   { transform: scaleX(0); opacity: 1; }
-  60%  { transform: scaleX(1); opacity: 1; }
-  100% { transform: scaleX(1); opacity: 0; }
+.tour-veil-out .veil-bar { opacity: 0; }
+
+/* Says which of the load's stages is running. Under the bar rather than over
+   it so the title, the brand and the progress read top to bottom in one column. */
+.veil-note {
+  margin-top: 10px;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  transition: opacity .25s ease;
 }
+.tour-veil-out .veil-note { opacity: 0; }
 
 /* The real wordmark waits until the flying one has landed on it. */
 .mark-hidden { opacity: 0; }
@@ -518,6 +507,77 @@ button:disabled,
   touch-action: manipulation;
 }
 
+/* ── Side rail slab ──
+   The rail used to be `.pane` — a dark translucent panel with brass icons and
+   labels. It is the other way round now: brass IS the panel, and the content
+   is the dark ink that reads on it.
+
+   Solid, not translucent. A brass wash over a live panorama picks up whatever
+   is behind it, so the same slab looked olive against a plant and orange
+   against a lit shopfront; the labels are 8.5px and cannot afford a background
+   that moves. `--brass` and `--on-brass` are a matched pair in both themes, so
+   this inverts correctly in light mode rather than going dark-on-dark. */
+.rail-slab {
+  background: var(--brass);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, .38);
+}
+/* Separators are a darkening of the slab, not `--line`: that token is tuned
+   for dark surfaces and disappears entirely on brass. */
+.rail-divide { border-top: 1px solid rgba(0, 0, 0, .18); }
+
+/* ── Wall screens ──
+   Video surfaces mapped onto walls in the scan by ScreenEngine.
+
+   z-index 5 is deliberately the SAME as .chrome-mask and .chrome-mask-top, not
+   below them: equal z-index means DOM order decides, and TourScreen renders
+   this layer before both masks, so the masks paint over it. That is what we
+   want — a screen belongs to the building, so Matterport's control-bar mask
+   should cover it exactly as it covers the panorama behind it. Move this
+   element after the masks in the JSX and a video will punch through them.
+   Everything in .hud sits at 10 and above, so no HUD control is ever occluded.
+
+   `pointer-events: none` throughout. The video is scenery — every click has to
+   reach the panorama underneath so walking still works where a screen hangs. */
+.screen-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+  /* A screen's transform can never invalidate page layout. */
+  contain: layout paint style;
+}
+
+/* transform-origin at the top-left corner is not cosmetic: the homography maps
+   the element's local box starting at (0,0), and any other origin silently
+   offsets every screen by half its own size. */
+.wall-screen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  visibility: hidden;          /* the first engine tick reveals it */
+  will-change: transform;
+  overflow: hidden;
+  background: #000;
+  /* backface-visibility guards the case the winding check already covers —
+     belt and braces, because a video visible through the back of a wall is the
+     single most illusion-breaking failure this feature has. */
+  backface-visibility: hidden;
+}
+.wall-screen video,
+.wall-screen iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none;
+}
+/* Only the video crops to fill. A YouTube iframe is a player, not a picture:
+   object-fit does nothing to it, and its own letterboxing is what keeps the
+   frame from being stretched by whatever shape the authored rectangle is. */
+.wall-screen video { object-fit: cover; }
+
 /* ── Checkpoint markers ── */
 .cp-layer {
   position: absolute;
@@ -536,10 +596,10 @@ button:disabled,
      .cp-anchor static centring
      .cp-body   the bob, so the anchor's transform is never animated
 
-   A flat disc reads as decoration. This reads as an objective: a glyph that
-   says "there is something to answer here", a name plate saying which shop and
-   what it pays, and motion in the periphery so you register it while walking
-   rather than after studying the screen. */
+   A flat disc reads as decoration. This reads as a light placed in the space:
+   a thin brass ring with a lit core, a name plate saying which shop and what it
+   pays, and motion in the periphery so you register it while walking rather
+   than after studying the screen. */
 .cp {
   position: absolute;
   top: 0;
@@ -573,7 +633,25 @@ button:disabled,
   50%      { transform: translateY(-7px); }
 }
 
-/* The badge — brass coin with a serif "?" */
+/* The badge — a lit brass ring, not a coin.
+   The solid brass disc it replaces sat *on* the picture: an opaque object with
+   a highlight and a drop shadow, which is why it read as UI pasted over the
+   scene. A ring with a lit centre reads as something switched on inside the
+   mall, which is the whole point of a checkpoint standing in a storefront. */
+/* These values were not chosen by eye. They were converged on by rendering the
+   badge in headless Chrome beside a crop of the reference art, both scaled to
+   the same 33px ring, and iterating until the two matched. Two earlier attempts
+   failed here, in opposite directions, and both failures are worth recording:
+
+     1. A dark tint inside the ring. Read as a hollow washer with a dot in it.
+     2. Overcorrecting to an opaque cream fill with a wide bloom. Read as a
+        blown-out headlight, and buried the scene behind it.
+
+   What the reference actually is: a thin gold line, a *gap you can see the
+   scene through*, and a small tight white core with a warm halo. The interior
+   is barely tinted — alpha in the .04–.2 range — and the fade reaches zero
+   before the border, which is what keeps that gap readable. Raise those alphas
+   and it goes straight back to failure 2. */
 .cp-badge {
   position: relative;
   width: 46px;
@@ -583,66 +661,86 @@ button:disabled,
   place-items: center;
   pointer-events: auto;
   cursor: pointer;
-  border: 0;
   padding: 0;
+  border: 2.2px solid rgba(228,186,114,.85);
   touch-action: manipulation;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  /* No backdrop-filter: this sits over continuously repainting WebGL. */
-  background: radial-gradient(circle at 36% 30%, rgba(255,255,255,.55), transparent 58%),
-              linear-gradient(155deg, #e8c98d, var(--brass) 55%, #8a6a34);
+  /* closest-side, not the default farthest-corner: it makes every stop a
+     straight fraction of the badge's radius, so these numbers mean what they
+     say. No backdrop-filter — this sits over a surface repainting every frame. */
+  background: radial-gradient(circle closest-side,
+    rgba(255,238,208,.2) 0%,
+    rgba(230,180,104,.16) 45%,
+    rgba(190,143,75,.04) 84%,
+    rgba(190,143,75,0) 100%);
   box-shadow:
-    0 0 0 1.5px rgba(17,14,9,.55),
-    0 0 0 4px rgba(176,141,87,.22),
-    0 6px 18px rgba(0,0,0,.5);
+    0 0 3px rgba(255,232,186,.5),          /* the filament itself */
+    0 0 9px 1px rgba(224,178,92,.28);      /* bloom into the scene */
   transition: transform .18s cubic-bezier(.34,1.4,.64,1), box-shadow .18s ease;
 }
 .cp-badge:hover,
 .cp-badge:focus-visible {
   transform: scale(1.14);
+  border-color: rgba(240,200,124,.95);
   box-shadow:
-    0 0 0 1.5px rgba(17,14,9,.55),
-    0 0 0 6px rgba(176,141,87,.45),
-    0 8px 22px rgba(0,0,0,.55);
+    0 0 4px rgba(255,240,208,.75),
+    0 0 15px 3px rgba(224,178,92,.45);
 }
 .cp-badge:active { transform: scale(1.02); }
 
-/* The glyph, struck into the coin rather than printed on it.
-   Instrument Serif only ships a 400 weight, which at this size reads thin and
-   apologetic — wrong for something whose whole job is to say "press me". The
-   body face at 700 has the density, and the two-tone shadow (light below,
-   dark above) is what sells the engraving: it reads as debossed metal because
-   the highlight falls where a struck edge would catch the light. */
+/* The core — the lamp itself, and the only genuinely bright thing here.
+   Small: 50% of the content box works out at about 42% of the outer diameter,
+   which is what the reference's white disc measures. Sized in % so it follows
+   the badge down to its .cp-far size for free, and the gradient runs out to
+   fully transparent rather than stopping at an edge — a hard-edged white
+   circle reads as a sticker, a bloom reads as light. */
+.cp-core {
+  width: 50%;
+  height: 50%;
+  border-radius: 999px;
+  background: radial-gradient(circle closest-side,
+    #fff 0%,
+    #fff 50%,
+    rgba(255,244,222,.8) 72%,
+    rgba(255,226,178,0) 100%);
+  box-shadow:
+    0 0 5px 1px rgba(255,246,224,.45),
+    0 0 11px 2px rgba(232,184,108,.4);
+}
+
+/* Only ever rendered for an answered checkpoint now that the "?" is gone, so
+   it is styled for the jade ring rather than for struck brass: lit from
+   within, like the core it stands in for, instead of engraved into a face
+   that no longer exists. */
 .cp-glyph {
   font-family: var(--font-body), system-ui, sans-serif;
   font-weight: 700;
-  font-size: 23px;
+  font-size: 19px;
   line-height: 1;
-  color: #241c10;
-  text-shadow: 0 1px 0 rgba(255,244,222,.5), 0 -1px 1px rgba(0,0,0,.4);
-  /* Optical, not geometric: a "?" carries its mass high, so centring the box
-     leaves it looking like it is floating off the top of the coin. */
-  transform: translateY(1px);
+  /* Light and glowing: an answered ring has no lit core, so its interior is
+     the dimmed scene and the tick has to carry its own light. */
+  color: #eafaf0;
+  text-shadow: 0 0 8px rgba(90,140,102,.95), 0 0 3px rgba(20,40,26,.8);
 }
-.cp-done .cp-glyph {
-  font-size: 21px;
-  transform: translateY(0);
-  text-shadow: 0 1px 0 rgba(240,255,244,.45), 0 -1px 1px rgba(0,0,0,.35);
-}
-.cp-far .cp-glyph { font-size: 17px; }
+.cp-far .cp-glyph { font-size: 15px; }
 
 /* The halo — expanding ring that makes the badge findable peripherally.
    On a child, pointer-events:none, so its 1.9x box never eats a drag. */
 .cp-halo {
   position: absolute;
-  inset: -4px;
+  inset: -5px;
   border-radius: 999px;
-  border: 2px solid var(--brass);
+  border: 1px solid rgba(224,178,92,.5);
   pointer-events: none;
   animation: cp-pulse 2.4s ease-out infinite;
 }
+/* Starts at scale(1), not .9. Below 1 the halo sits *inside* the badge's own
+   border for the first beat of every cycle, which reads as a second concentric
+   ring — the reference has exactly one. From 1 it only ever expands outward,
+   so it is a pulse leaving the ring rather than a ring of its own. */
 @keyframes cp-pulse {
-  0%   { transform: scale(.9); opacity: .75; }
+  0%   { transform: scale(1); opacity: .55; }
   70%  { transform: scale(1.9); opacity: 0; }
   100% { transform: scale(1.9); opacity: 0; }
 }
@@ -696,10 +794,28 @@ button:disabled,
   font-variant-numeric: tabular-nums;
 }
 
-/* Answered: stops advertising, keeps its place as a landmark. */
+/* Answered: stops advertising, keeps its place as a landmark. Same ring, cooler
+   metal and a dimmer lamp — visible when you look for it, invisible when you
+   are not, which is the opposite of what an unanswered one should do. */
 .cp-done .cp-badge {
-  background: radial-gradient(circle at 36% 30%, rgba(255,255,255,.4), transparent 58%),
-              linear-gradient(155deg, #a8d0b0, var(--jade) 60%, #3f6b48);
+  border-color: rgba(160,206,172,.8);
+  /* The same ring with the lamp out: cooler metal, a fainter tint, and the
+     tick doing the work the core used to. */
+  background: radial-gradient(circle closest-side,
+    rgba(228,248,235,.16) 0%,
+    rgba(124,174,134,.13) 45%,
+    rgba(94,138,104,.03) 84%,
+    rgba(94,138,104,0) 100%);
+  box-shadow:
+    0 0 3px rgba(214,240,221,.4),
+    0 0 8px 1px rgba(124,174,134,.22);
+}
+.cp-done .cp-badge:hover,
+.cp-done .cp-badge:focus-visible {
+  border-color: rgba(176,220,188,.92);
+  box-shadow:
+    0 0 4px rgba(214,240,221,.6),
+    0 0 13px 3px rgba(124,174,134,.35);
 }
 .cp-done .cp-halo { animation: none; opacity: 0; }
 .cp-done .cp-body { animation: none; }
@@ -711,7 +827,14 @@ button:disabled,
    per frame. */
 .cp-far .cp-plate,
 .cp-far .cp-stem { display: none; }
-.cp-far .cp-badge { width: 34px; height: 34px; }
+/* The border thins with the badge to hold the same stroke-to-diameter ratio:
+   2.2px on a 34px ring is a heavier line, in proportion, than on a 46px one,
+   and the far marker would read as the bolder of the two — backwards. */
+.cp-far .cp-badge {
+  width: 34px;
+  height: 34px;
+  border-width: 1.6px;
+}
 
 /* ── Offers flyout ──
    z-index 18: above the checkpoint markers, below the quiz drawer (20) so a
@@ -729,6 +852,15 @@ button:disabled,
   position: absolute;
   inset: 0;
   z-index: 20;
+  pointer-events: none;
+}
+/* The shop directory sits in the same slot and wears the same `.drawer`, one
+   layer below: picking a shop closes it and opens that shop's panel, so the
+   two are never both up — but if a race ever put them there, the shop wins. */
+.stores-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
   pointer-events: none;
 }
 /* Phones get a bottom sheet, not a side drawer.

@@ -1,4 +1,6 @@
 import type { Badge, Reward } from "./types";
+import type { Locale } from "./i18n";
+import { BADGE_EN, REWARD_EN } from "./content-en";
 
 export const BADGES: Badge[] = [
   {
@@ -87,3 +89,27 @@ export const REWARDS: Reward[] = [
     requiredXp: 500,
   },
 ];
+
+/**
+ * The same badges and rewards, said in the reader's language.
+ *
+ * The arrays above stay the source of truth for ids, icons, conditions and XP
+ * thresholds — only the wording is swapped, and a missing English entry falls
+ * back to the French rather than rendering blank. Both are pure and cheap
+ * enough to call during render; neither allocates unless the locale is English.
+ */
+export function badgesFor(locale: Locale): Badge[] {
+  if (locale !== "en") return BADGES;
+  return BADGES.map((badge) => {
+    const copy = BADGE_EN[badge.id];
+    return copy ? { ...badge, ...copy } : badge;
+  });
+}
+
+export function rewardsFor(locale: Locale): Reward[] {
+  if (locale !== "en") return REWARDS;
+  return REWARDS.map((reward) => {
+    const copy = REWARD_EN[reward.id];
+    return copy ? { ...reward, ...copy } : reward;
+  });
+}

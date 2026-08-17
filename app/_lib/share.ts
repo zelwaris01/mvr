@@ -11,7 +11,7 @@ export async function shareTour(): Promise<ShareResult> {
   const url = window.location.href;
   try {
     if (navigator.share) {
-      await navigator.share({ title: "MVR World — Smart Mall", url });
+      await navigator.share({ title: "Smart Mall Experience — By MVR World", url });
       return "shared";
     }
     await navigator.clipboard.writeText(url);

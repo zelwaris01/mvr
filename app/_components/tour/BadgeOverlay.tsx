@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { BADGES } from "@/app/_lib/rewards-data";
+import { badgesFor } from "@/app/_lib/rewards-data";
 import { useGame } from "@/app/_components/GameStateProvider";
+import { useLocale } from "@/app/_lib/i18n";
 import { usePress } from "@/app/_lib/usePress";
 
 /**
@@ -11,6 +12,8 @@ import { usePress } from "@/app/_lib/usePress";
  */
 export function BadgeOverlay({ onClose }: { onClose: () => void }) {
   const { progress } = useGame();
+  const { t, locale } = useLocale();
+  const badges = badgesFor(locale);
   const closePress = usePress(onClose);
   const scrimPress = usePress(onClose);
 
@@ -42,20 +45,20 @@ export function BadgeOverlay({ onClose }: { onClose: () => void }) {
         className="sm:hidden absolute inset-0 pointer-events-auto cursor-default"
       />
 
-      <aside className="drawer on-dark" role="region" aria-label="Vos badges">
+      <aside className="drawer on-dark" role="region" aria-label={t("badgesRegion")}>
         <div className="flex items-start justify-between gap-3 p-5">
           <div className="flex flex-col gap-1.5">
-            <span className="eyebrow">Votre collection</span>
+            <span className="eyebrow">{t("badgesEyebrow")}</span>
             <h2 className="font-display text-[24px] leading-none text-ink">
-              Badges
+              {t("badgesTitle")}
             </h2>
             <span className="text-[11px] text-ink-3 leading-none tabular-nums">
-              {unlocked.length} / {BADGES.length} débloqués
+              {t("badgesCount", { n: unlocked.length, total: badges.length })}
             </span>
           </div>
           <button
             {...closePress}
-            aria-label="Fermer les badges"
+            aria-label={t("badgesClose")}
             className="w-10 h-10 rounded-full grid place-items-center text-ink-3 hover:text-brass border border-line hover:border-brass-line transition-colors flex-shrink-0"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -63,7 +66,7 @@ export function BadgeOverlay({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex flex-col gap-2 px-5 pb-5">
-          {BADGES.map((badge) => {
+          {badges.map((badge) => {
             const has = unlocked.includes(badge.id);
             return (
               <div
@@ -93,8 +96,7 @@ export function BadgeOverlay({ onClose }: { onClose: () => void }) {
         </div>
 
         <p className="mt-auto border-t border-line p-5 text-[10.5px] leading-snug text-ink-3">
-          Certains badges visent la totalité du mall — ils se débloqueront à
-          mesure que de nouvelles boutiques seront balisées dans la visite.
+          {t("badgesFootnote")}
         </p>
       </aside>
     </div>

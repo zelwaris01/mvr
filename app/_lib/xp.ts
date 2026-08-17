@@ -1,4 +1,5 @@
 import { LEVEL_BANDS } from "./constants";
+import type { Locale } from "./i18n";
 
 export type Level = { level: number; minXp: number; label: string };
 
@@ -9,13 +10,17 @@ export type Level = { level: number; minXp: number; label: string };
  * `maxXp` of 0 means the roster hasn't arrived yet (or the model has no pins).
  * Falling back to 1 keeps every band at 0, so the user reads as level 1 rather
  * than dividing by zero into NaN.
+ *
+ * The rank name is resolved here rather than at the point of display so that
+ * `Level` stays a plain, already-translated value — the XP maths above it has
+ * no business knowing there are two languages.
  */
-export function buildLevels(maxXp: number): Level[] {
+export function buildLevels(maxXp: number, locale: Locale = "fr"): Level[] {
   const ceiling = Math.max(maxXp, 1);
   return LEVEL_BANDS.map((b) => ({
     level: b.level,
     minXp: Math.round(b.at * ceiling),
-    label: b.label,
+    label: b.label[locale],
   }));
 }
 

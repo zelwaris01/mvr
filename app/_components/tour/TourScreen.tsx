@@ -6,13 +6,23 @@ import {
   tourUrlFor,
   XP_PER_STORE_VISIT,
 } from "@/app/_lib/constants";
-import { QUESTIONS_BY_STORE } from "@/app/_lib/questions-data";
+import { QUESTIONS, QUESTIONS_BY_STORE } from "@/app/_lib/questions-data";
 import { STORES } from "@/app/_lib/stores-data";
 import { buildRoster, rosterFacts } from "@/app/_lib/roster";
 import { aimAt } from "@/app/_lib/tour-nav";
 import { useCheckpointOverlay } from "@/app/_lib/useCheckpointOverlay";
+import { useWallScreens } from "@/app/_lib/useWallScreens";
+import { useQueryFlag } from "@/app/_lib/useQueryFlag";
+import { screensFor } from "@/app/_lib/screens-data";
+import { placeScreens } from "@/app/_lib/screen-placement";
 import { useMatterportTour } from "@/app/_lib/useMatterportTour";
 import { useGame } from "@/app/_components/GameStateProvider";
+import { useLocale } from "@/app/_lib/i18n";
+import {
+  startSession,
+  trackAnswer,
+  trackStoreClick,
+} from "@/app/_lib/analytics";
 import { CheckpointLayer } from "./CheckpointLayer";
 import { QuizDrawer } from "./QuizDrawer";
 import { BadgeOverlay } from "./BadgeOverlay";
@@ -20,8 +30,11 @@ import { RewardsOverlay } from "./RewardsOverlay";
 import { PromoFlyout } from "./PromoFlyout";
 import { ToolsMenu } from "./ToolsMenu";
 import { TapDebug } from "./TapDebug";
+import { WallScreens } from "./WallScreens";
+import { ScreenPicker } from "./ScreenPicker";
 import { AdIntro } from "./AdIntro";
-import { SideRail, StoreRail, TourMenu, TourTopBar, TourVeil } from "./TourHud";
+import { StoresPanel } from "./StoresPanel";
+import { SideRail, TourTopBar, TourVeil } from "./TourHud";
 import { usePress } from "@/app/_lib/usePress";
 
 const FLIGHT_MS = 1600;
@@ -44,7 +57,43 @@ function drawerInset(): number {
 export function TourScreen() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const { progress, exploreStore, syncRoster } = useGame();
+  const { progress, exploreStore, syncRoster, answerQuestion } = useGame();
+  const { t, locale } = useLocale();
+
+  /**
+   * Counts this visit and runs the foreground clock behind the KPIs on /admin.
+   * Mounted here rather than in the layout so it only counts sessions that got
+   * as far as the tour — /admin itself must not inflate its own numbers.
+   */
+  useEffect(() => startSession(), []);
+
+  /**
+   * A ref, not state: it must flip during the same tick as the first answer,
+   * and it must not cause a render. This is what makes "quiz participants"
+   * count visits rather than answers.
+   */
+  const answeredThisSession = useRef(false);
+
+  /**
+   * Wraps the game's own recorder so the KPI and the XP are written from the
+   * same call. Two separate paths would drift the moment one of them is
+   * guarded and the other isn't.
+   */
+  const recordAnswer = useCallback(
+    (questionId: string, index: number) => {
+      const question = QUESTIONS.find((q) => q.id === questionId);
+      // Already answered — the drawer guards this, but the counter must not
+      // rely on a caller's discipline.
+      if (!question || progress.answeredQuestions[questionId]) {
+        answerQuestion(questionId, index);
+        return;
+      }
+      answerQuestion(questionId, index);
+      trackAnswer(index === question.correctIndex, !answeredThisSession.current);
+      answeredThisSession.current = true;
+    },
+    [answerQuestion, progress.answeredQuestions]
+  );
 
   /** Which scan is loaded. Each level of the mall is its own Matterport space. */
   const [levelIndex, setLevelIndex] = useState(0);
@@ -61,6 +110,13 @@ export function TourScreen() {
    * from the rail rather than on load.
    */
   const [offersOpen, setOffersOpen] = useState(false);
+  /**
+   * The shop directory, opened from the rail. It stands in for the strip of
+   * chips that used to run along the bottom of the screen: the strip could
+   * only ever show a few of them at once and sat where the checkpoints' own
+   * name plates want to be.
+   */
+  const [storesOpen, setStoresOpen] = useState(false);
   /** Phones: the burger's tools page, standing in for the side rail. */
   const [toolsOpen, setToolsOpen] = useState(false);
   /** Enlarged shop photo. Lives here so it can sit above the drawer. */
@@ -73,8 +129,6 @@ export function TourScreen() {
     []
   );
   const [flyingSlug, setFlyingSlug] = useState<string | null>(null);
-  const [mapMode, setMapMode] = useState(false);
-  const [mapBroken, setMapBroken] = useState(false);
 
   /**
    * Set synchronously before any await. A React state flag cannot guard this:
@@ -88,7 +142,12 @@ export function TourScreen() {
   const openStore = useCallback((slug: string) => {
     setBadgesOpen(false);
     setRewardsOpen(false);
+    setStoresOpen(false);
     setActiveSlug(slug);
+    // Counted here rather than at each call site: this is the one funnel every
+    // way of opening a shop passes through — marker, directory, or a flight
+    // that skipped straight to the panel.
+    trackStoreClick(slug);
   }, []);
 
   // Declared before the SDK hook so the click handler can reach it; the hook
@@ -97,6 +156,7 @@ export function TourScreen() {
 
   const {
     status,
+    phase,
     tags,
     sdk,
     sdkRef,
@@ -109,9 +169,12 @@ export function TourScreen() {
     onStoreEntered: exploreStore,
   });
 
+  // Rebuilt on a language switch, which is what re-renders every shop blurb
+  // and quiz question in the new language without touching saved progress —
+  // ids and correct answers are locale-independent by design.
   const roster = useMemo(
-    () => buildRoster(tags, STORES, QUESTIONS_BY_STORE),
-    [tags]
+    () => buildRoster(tags, STORES, QUESTIONS_BY_STORE, locale),
+    [tags, locale]
   );
 
   // Badge and level maths follow the model, not the catalogue.
@@ -126,10 +189,24 @@ export function TourScreen() {
 
   const { bind, setDrawerInset } = useCheckpointOverlay(sdk, stageRef, markers);
 
-  // Markers hidden behind the drawer stop doing per-frame work.
+  /**
+   * Screens are authored per scan, so switching level swaps the set — but a
+   * tag-anchored one also needs the pins, which arrive over the SDK after the
+   * model loads. Hence `tags` in the deps: the screen appears when the pin it
+   * hangs on does, and a shop absent from this model drops out rather than
+   * hanging a video at the origin.
+   */
+  const wallScreens = useMemo(
+    () => placeScreens(screensFor(level.id), tags),
+    [level.id, tags]
+  );
+  const { bind: bindScreen } = useWallScreens(sdk, stageRef, wallScreens);
+
+  // Markers hidden behind a right-hand panel stop doing per-frame work. The
+  // directory occupies the same slot as the quiz drawer, so it counts too.
   useEffect(() => {
-    setDrawerInset(activeSlug || badgesOpen ? drawerInset() : 0);
-  }, [activeSlug, badgesOpen, setDrawerInset]);
+    setDrawerInset(activeSlug || badgesOpen || storesOpen ? drawerInset() : 0);
+  }, [activeSlug, badgesOpen, storesOpen, setDrawerInset]);
 
   const doneSlugs = useMemo(() => {
     const done = new Set<string>();
@@ -166,6 +243,10 @@ export function TourScreen() {
   const flyToStore = useCallback(
     async (slug: string) => {
       if (flyingRef.current) return;
+      // Out of the way first. The flight is the answer to the click, and on a
+      // phone the directory is a sheet over 78% of the screen — leaving it up
+      // would hide the very thing the press asked to see.
+      setStoresOpen(false);
       const entry = roster.find((s) => s.slug === slug);
       const sdk = sdkRef.current;
 
@@ -194,11 +275,6 @@ export function TourScreen() {
       const ms = reduced ? FLIGHT_MS_REDUCED : FLIGHT_MS;
 
       try {
-        if (mapMode) {
-          await sdk.Mode.moveTo(sdk.Mode.Mode.INSIDE);
-          setMapMode(false);
-        }
-
         if (process.env.NODE_ENV !== "production") {
           console.log(
             `[tour] flying to ${slug} sweep=${entry.sweepId} from=${currentSweepRef.current}`
@@ -260,7 +336,7 @@ export function TourScreen() {
         }
       }
     },
-    [roster, sdkRef, currentSweepRef, mapMode, openStore, exploreStore]
+    [roster, sdkRef, currentSweepRef, openStore, exploreStore]
   );
 
   // Keep the latch the SDK's tag-click handler calls pointed at the live
@@ -279,36 +355,20 @@ export function TourScreen() {
     setLevelIndex(index);
   }, []);
 
-  // ── Map view ──
-  const toggleMap = useCallback(async () => {
-    const sdk = sdkRef.current;
-    if (!sdk) return;
-    try {
-      if (mapMode) {
-        await sdk.Mode.moveTo(sdk.Mode.Mode.INSIDE);
-        setMapMode(false);
-      } else {
-        try {
-          await sdk.Mode.moveTo(sdk.Mode.Mode.DOLLHOUSE);
-        } catch {
-          // Unaligned or 360-only scans reject dollhouse; floorplan often works.
-          await sdk.Mode.moveTo(sdk.Mode.Mode.FLOORPLAN);
-        }
-        setMapMode(true);
-      }
-    } catch {
-      // Neither view is available in this model — stop offering the button
-      // rather than looking broken on every press.
-      setMapBroken(true);
-      setMapMode(false);
-    }
-  }, [mapMode, sdkRef]);
-
   /** Shared by the desktop rail and the phone tools page. */
   const openBadges = useCallback(() => {
     setActiveSlug(null);
     setRewardsOpen(false);
+    setStoresOpen(false);
     setBadgesOpen(true);
+  }, []);
+
+  /** Same rule: one translucent surface over the live scene at a time. */
+  const toggleStores = useCallback(() => {
+    setActiveSlug(null);
+    setBadgesOpen(false);
+    setRewardsOpen(false);
+    setStoresOpen((v) => !v);
   }, []);
 
   const activeStore = roster.find((s) => s.slug === activeSlug) ?? null;
@@ -323,13 +383,13 @@ export function TourScreen() {
   const [markVisible, setMarkVisible] = useState(false);
   const handleVeilRetired = useCallback(() => setMarkVisible(true), []);
 
-  // `?tap=1` only. Read once, from the URL rather than from state, so the
-  // readout costs nothing at all on a normal visit.
-  const [tapDebug] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      new URLSearchParams(window.location.search).has("tap")
-  );
+  // `?tap=1` / `?screen=1` only, so neither workbench costs anything at all on
+  // a normal visit. Read through useQueryFlag rather than a useState
+  // initialiser: the initialiser ran on the server (false) and again during
+  // hydration (true), which is a hydration mismatch on every load with the
+  // flag set — see the note in useQueryFlag.
+  const tapDebug = useQueryFlag("tap");
+  const screenPicker = useQueryFlag("screen");
 
   return (
     <div ref={stageRef} className="stage">
@@ -343,13 +403,18 @@ export function TourScreen() {
         className="stage-frame"
         allow="fullscreen; xr-spatial-tracking"
         allowFullScreen
-        title="Visite virtuelle du mall"
+        title={t("tourFrameTitle")}
       />
 
-      {/* Cover Matterport's chrome, which no URL param or SDK call reliably
-          removes: the control bar along the bottom and the wordmark top-left.
-          Both sit above the iframe and below the HUD. */}
-      <div className="chrome-mask" aria-hidden />
+      {/* Before the top mask on purpose: a screen is meant to be part of the
+          building, so it sits with the scene rather than with the interface,
+          and the mask should cover it exactly as it covers the panorama. */}
+      <WallScreens screens={wallScreens} bind={bindScreen} />
+
+      {/* Only the top band remains. The bottom one was removed on request —
+          it was a 112px dark fade covering Matterport's control bar, so that
+          bar may now be visible along the bottom edge. Restore `.chrome-mask`
+          if it shows. */}
       <div className="chrome-mask-top" aria-hidden />
 
       {/* Keyed on the level: switching floor loads a different scan, so the
@@ -359,6 +424,7 @@ export function TourScreen() {
       <TourVeil
         key={`veil-${level.id}`}
         status={status}
+        phase={phase}
         onRetired={handleVeilRetired}
       />
 
@@ -377,25 +443,26 @@ export function TourScreen() {
             // One translucent surface over the live scene at a time.
             setActiveSlug(null);
             setBadgesOpen(false);
+            setStoresOpen(false);
             setRewardsOpen(true);
           }}
           onOpenTools={() => {
             setActiveSlug(null);
             setBadgesOpen(false);
             setRewardsOpen(false);
+            setStoresOpen(false);
             setToolsOpen(true);
           }}
         />
 
         {status === "ready" && (
           <SideRail
-            onMap={toggleMap}
+            onStores={toggleStores}
+            storesActive={storesOpen}
+            storesDisabled={flyingSlug !== null}
             onBadges={openBadges}
             onOffers={() => setOffersOpen((v) => !v)}
             offersActive={offersOpen}
-            mapBroken={mapBroken}
-            mapDisabled={flyingSlug !== null}
-            mapActive={mapMode}
             levels={MATTERPORT_LEVELS}
             currentLevel={levelIndex}
             onLevel={goToLevel}
@@ -406,16 +473,31 @@ export function TourScreen() {
         {toolsOpen && status === "ready" && (
           <ToolsMenu
             onClose={() => setToolsOpen(false)}
-            onMap={toggleMap}
+            onStores={() => setStoresOpen(true)}
+            storesActive={storesOpen}
+            storesDisabled={flyingSlug !== null}
+            storeCount={roster.length}
             onBadges={openBadges}
             onOffers={() => setOffersOpen(true)}
-            mapBroken={mapBroken}
-            mapDisabled={flyingSlug !== null}
-            mapActive={mapMode}
             levels={MATTERPORT_LEVELS}
             currentLevel={levelIndex}
             onLevel={goToLevel}
             floorsDisabled={flyingSlug !== null}
+          />
+        )}
+
+        {/* Rendered while connecting too, unlike the rail that opens it: the
+            burger is reachable from the first frame, and a directory that says
+            "chargement" beats one that refuses to open. */}
+        {storesOpen && (
+          <StoresPanel
+            stores={roster}
+            doneSlugs={doneSlugs}
+            pendingXp={pendingXp}
+            connecting={status === "connecting"}
+            flyingSlug={flyingSlug}
+            onSelect={flyToStore}
+            onClose={() => setStoresOpen(false)}
           />
         )}
 
@@ -436,16 +518,6 @@ export function TourScreen() {
           disabled={flyingSlug !== null}
         />
 
-        <StoreRail
-          stores={roster}
-          activeSlug={activeSlug}
-          flyingSlug={flyingSlug}
-          doneSlugs={doneSlugs}
-          pendingXp={pendingXp}
-          onSelect={flyToStore}
-          connecting={status === "connecting"}
-        />
-
         {activeStore && (
           // Keyed on the slug so opening a different shop remounts the panel:
           // its tab choice and quiz feedback are initial state, and should
@@ -453,6 +525,7 @@ export function TourScreen() {
           <QuizDrawer
             key={activeStore.slug}
             store={activeStore}
+            onAnswer={recordAnswer}
             onClose={() => setActiveSlug(null)}
             onOpenImage={openImage}
           />
@@ -467,7 +540,8 @@ export function TourScreen() {
           />
         )}
 
-        {status === "ready" && <TourMenu />}
+        {/* The ⋯ overflow menu lived here. Removed on request; its only item,
+            "Partager la visite", is a button on the side rail now. */}
 
         <TourStatusNote status={status} rosterCount={roster.length} />
 
@@ -481,6 +555,7 @@ export function TourScreen() {
       </div>
 
       {tapDebug && <TapDebug />}
+      {screenPicker && <ScreenPicker sdk={sdk} spaceId={level.id} />}
     </div>
   );
 }
@@ -501,6 +576,7 @@ function Lightbox({
   start: number;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const [index, setIndex] = useState(start);
   const count = images.length;
 
@@ -527,10 +603,10 @@ function Lightbox({
   }, [onClose, step]);
 
   return (
-    <div className="lightbox" role="dialog" aria-label="Image agrandie">
+    <div className="lightbox" role="dialog" aria-label={t("lightboxRegion")}>
       <button
         {...scrimPress}
-        aria-label="Fermer l'image"
+        aria-label={t("lightboxClose")}
         tabIndex={-1}
         className="lightbox-scrim"
       />
@@ -544,14 +620,14 @@ function Lightbox({
         <>
           <button
             {...prevPress}
-            aria-label="Image précédente"
+            aria-label={t("lightboxPrev")}
             className="lightbox-nav lightbox-nav-prev"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
           <button
             {...nextPress}
-            aria-label="Image suivante"
+            aria-label={t("lightboxNext")}
             className="lightbox-nav lightbox-nav-next"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
@@ -564,7 +640,7 @@ function Lightbox({
 
       <button
         {...closePress}
-        aria-label="Fermer l'image"
+        aria-label={t("lightboxClose")}
         className="absolute top-4 right-4 z-[2] w-10 h-10 rounded-full pane grid place-items-center text-ink-2 hover:text-brass transition-colors"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -589,29 +665,32 @@ function TourStatusNote({
   status: string;
   rosterCount: number;
 }) {
+  const { t } = useLocale();
   if (status === "ready" && rosterCount > 0) return null;
 
   return (
-    <div className="hud-on absolute left-4 bottom-28 md:bottom-4 max-w-[320px] flex flex-col gap-1.5 px-4 py-3 rounded-xl pane">
+    // bottom-4 at every width now. The old bottom-28 on phones was clearing
+    // the strip of store chips that used to sit along the bottom edge; with the
+    // directory moved into a panel there is nothing down there to clear.
+    <div className="hud-on absolute left-4 bottom-4 max-w-[320px] flex flex-col gap-1.5 px-4 py-3 rounded-xl pane">
       {status === "connecting" && (
         <span className="text-[11px] text-ink-2 leading-snug">
-          Connexion à la visite…
+          {t("statusConnecting")}
         </span>
       )}
       {status === "disabled" && (
         <span className="text-[11px] text-ink-2 leading-snug">
-          Visite non interactive — aucune clé SDK configurée.
+          {t("statusDisabled")}
         </span>
       )}
       {status === "error" && (
         <span className="text-[11px] text-clay leading-snug">
-          La visite est chargée mais non instrumentée. Vérifiez la clé SDK et
-          son allowlist de domaines.
+          {t("statusError")}
         </span>
       )}
       {status === "ready" && rosterCount === 0 && (
         <span className="text-[11px] text-ink-2 leading-snug">
-          Aucune boutique balisée dans ce modèle.
+          {t("statusNoStores")}
         </span>
       )}
     </div>

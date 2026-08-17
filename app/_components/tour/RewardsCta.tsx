@@ -1,6 +1,7 @@
 "use client";
 
 import { STORES_URL } from "@/app/_lib/ad";
+import { useLocale } from "@/app/_lib/i18n";
 
 /**
  * "Débloquer mes récompenses" — our replacement for Matterport's own
@@ -17,6 +18,7 @@ import { STORES_URL } from "@/app/_lib/ad";
  * headline and must not compete with them.
  */
 export function RewardsCta({ compact = false }: { compact?: boolean }) {
+  const { t } = useLocale();
   return (
     <a
       href={STORES_URL}
@@ -53,14 +55,14 @@ export function RewardsCta({ compact = false }: { compact?: boolean }) {
             compact ? "text-[12.5px]" : "text-[14px]"
           }`}
         >
-          Débloquer mes récompenses
+          {t("ctaTitle")}
         </span>
         <span
           className={`text-ink-3 leading-snug ${
             compact ? "text-[10.5px]" : "text-[11.5px]"
           }`}
         >
-          Voir toutes les boutiques et leurs offres
+          {t("ctaBody")}
         </span>
       </span>
 

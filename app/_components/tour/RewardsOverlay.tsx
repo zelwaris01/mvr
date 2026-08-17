@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import type { DiscoveredStore } from "@/app/_lib/roster";
 import { useGame } from "@/app/_components/GameStateProvider";
-import { BADGES, REWARDS } from "@/app/_lib/rewards-data";
+import { badgesFor, rewardsFor } from "@/app/_lib/rewards-data";
+import { useLocale } from "@/app/_lib/i18n";
 import { RewardsCta } from "./RewardsCta";
 import { usePress } from "@/app/_lib/usePress";
 
@@ -23,6 +24,9 @@ export function RewardsOverlay({
   onClose: () => void;
 }) {
   const { progress, level, nextLevel, levelProgress } = useGame();
+  const { t, locale } = useLocale();
+  const badges = badgesFor(locale);
+  const rewards = rewardsFor(locale);
   const closePress = usePress(onClose);
 
   useEffect(() => {
@@ -48,11 +52,11 @@ export function RewardsOverlay({
   ).length;
 
   return (
-    <div className="profile" role="region" aria-label="Mon profil">
+    <div className="profile" role="region" aria-label={t("profileRegion")}>
       <div className="profile-sheet">
         <button
           {...closePress}
-          aria-label="Fermer"
+          aria-label={t("close")}
           // `fixed`, not absolute: positioned against the sheet it scrolled
           // away with the content, and on a phone — where the badge and
           // reward lists are long and there is no Escape key — that left no
@@ -63,7 +67,7 @@ export function RewardsOverlay({
         </button>
 
         {/* ── Profil ── */}
-        <SectionTitle>Mon profil</SectionTitle>
+        <SectionTitle>{t("profileTitle")}</SectionTitle>
 
         <div className="rounded-2xl border border-line bg-surface-1 p-5 md:p-6 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -73,7 +77,7 @@ export function RewardsOverlay({
               </span>
               <span className="flex flex-col gap-1">
                 <span className="text-[9.5px] uppercase tracking-[0.18em] text-ink-3">
-                  Niveau
+                  {t("level")}
                 </span>
                 <span className="font-display text-[24px] leading-none text-ink">
                   {level.label}
@@ -86,8 +90,8 @@ export function RewardsOverlay({
               </p>
               <p className="text-[10.5px] text-ink-3 mt-1.5">
                 {nextLevel
-                  ? `prochain : ${nextLevel.minXp} XP`
-                  : "niveau maximum"}
+                  ? t("nextLevel", { xp: nextLevel.minXp })
+                  : t("maxLevel")}
               </p>
             </div>
           </div>
@@ -101,16 +105,20 @@ export function RewardsOverlay({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Stat value={visited} total={roster.length} label="Boutiques visitées" />
+          <Stat
+            value={visited}
+            total={roster.length}
+            label={t("statVisited")}
+          />
           <Stat
             value={answered}
             total={allQuestions.length}
-            label="Questions répondues"
+            label={t("statAnswered")}
           />
           <Stat
             value={correct}
             total={allQuestions.length}
-            label="Bonnes réponses"
+            label={t("statCorrect")}
             tone="jade"
           />
         </div>
@@ -120,10 +128,10 @@ export function RewardsOverlay({
         <RewardsCta />
 
         {/* ── Badges ── */}
-        <SectionTitle>Vos badges</SectionTitle>
+        <SectionTitle>{t("yourBadges")}</SectionTitle>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {BADGES.map((badge) => {
+          {badges.map((badge) => {
             const has = progress.unlockedBadges.includes(badge.id);
             return (
               <div
@@ -154,10 +162,10 @@ export function RewardsOverlay({
         </div>
 
         {/* ── Récompenses ── */}
-        <SectionTitle>Vos récompenses</SectionTitle>
+        <SectionTitle>{t("yourRewards")}</SectionTitle>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {REWARDS.map((reward) => {
+          {rewards.map((reward) => {
             const unlocked = progress.totalXp >= reward.requiredXp;
             return (
               <div
@@ -188,8 +196,10 @@ export function RewardsOverlay({
                   }`}
                 >
                   {unlocked
-                    ? "Débloquée"
-                    : `${reward.requiredXp - progress.totalXp} XP restants`}
+                    ? t("rewardUnlocked")
+                    : t("rewardRemaining", {
+                        xp: reward.requiredXp - progress.totalXp,
+                      })}
                 </span>
               </div>
             );
@@ -199,7 +209,7 @@ export function RewardsOverlay({
         {/* ── Par boutique ── */}
         {roster.length > 0 && (
           <>
-            <SectionTitle>Offres des boutiques</SectionTitle>
+            <SectionTitle>{t("shopOffers")}</SectionTitle>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pb-2">
               {roster.map((store) => {
                 const done =
@@ -231,7 +241,7 @@ export function RewardsOverlay({
                           done ? "text-brass" : "text-ink-3"
                         }`}
                       >
-                        {done ? store.reward : "Quiz à terminer sans faute"}
+                        {done ? store.reward : t("quizPerfectNeeded")}
                       </span>
                     </span>
                   </div>

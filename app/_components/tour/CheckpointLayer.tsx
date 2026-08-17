@@ -2,6 +2,7 @@
 
 import { memo, useRef } from "react";
 import type { DiscoveredStore } from "@/app/_lib/roster";
+import { useLocale } from "@/app/_lib/i18n";
 
 type Props = {
   stores: DiscoveredStore[];
@@ -64,6 +65,7 @@ function Checkpoint({
   bind: Props["bind"];
   onSelect: Props["onSelect"];
 }) {
+  const { t: translate } = useLocale();
   const down = useRef({ x: 0, y: 0, t: 0 });
 
   /**
@@ -83,7 +85,7 @@ function Checkpoint({
     },
   };
 
-  const label = done ? "quiz terminé" : `${xp} XP à gagner`;
+  const label = done ? translate("cpDone") : translate("cpToEarn", { xp });
 
   return (
     <div ref={bind(store.tagId)} className={`cp ${done ? "cp-done" : ""}`}>
@@ -98,9 +100,19 @@ function Checkpoint({
             {...press}
           >
             <span className="cp-halo" aria-hidden />
-            <span className="cp-glyph" aria-hidden>
-              {done ? "✓" : "?"}
-            </span>
+            {/* Unanswered: a lit core inside the ring, no glyph. Answered:
+                the ring keeps the same silhouette and holds a tick instead,
+                so a finished checkpoint still reads as a landmark rather than
+                disappearing into the scene.
+                The name and the XP were never the badge's job — the plate
+                below says both — which is what makes dropping the "?" safe. */}
+            {done ? (
+              <span className="cp-glyph" aria-hidden>
+                ✓
+              </span>
+            ) : (
+              <span className="cp-core" aria-hidden />
+            )}
           </button>
 
           {/* Clicking the plate does the same as the badge — a bigger target

@@ -9,11 +9,28 @@
  * So switching level means loading a different model and reconnecting the
  * SDK, not calling `Floor.moveTo`. Add a scan here and it becomes a level.
  */
-export type MallLevel = { id: string; short: string; label: string };
+/**
+ * `short` is a code, not prose — N0/N1 is the same in both languages, and it
+ * is what the rail button shows, so it stays a plain string. Only the spoken
+ * name of the level has to be translated.
+ */
+export type MallLevel = {
+  id: string;
+  short: string;
+  label: { fr: string; en: string };
+};
 
 export const MATTERPORT_LEVELS: MallLevel[] = [
-  { id: "iGiPWMPBMdw", short: "N0", label: "Rez-de-chaussée" },
-  { id: "UjnosRzGqQH", short: "N1", label: "Premier étage" },
+  {
+    id: "iGiPWMPBMdw",
+    short: "N0",
+    label: { fr: "Rez-de-chaussée", en: "Ground floor" },
+  },
+  {
+    id: "UjnosRzGqQH",
+    short: "N1",
+    label: { fr: "Premier étage", en: "First floor" },
+  },
 ];
 
 /** The space loaded on arrival. */
@@ -28,6 +45,22 @@ export const MATTERPORT_SPACE_ID = MATTERPORT_LEVELS[0].id;
  */
 export const MATTERPORT_SDK_KEY =
   process.env.NEXT_PUBLIC_MATTERPORT_SDK_KEY ?? "";
+
+/**
+ * The hosted SDK bootstrap, which exports `connect` directly.
+ *
+ * It lives here rather than beside its only caller so the document head can
+ * `modulepreload` it: the connection is otherwise not even requested until
+ * React has hydrated and the tour component has mounted, which puts a
+ * cross-origin fetch on the critical path at the worst possible moment — while
+ * the player is already saturating the connection downloading the model.
+ *
+ * The URL must match the caller's import byte for byte or the preload is
+ * wasted and the module is fetched twice, so both read this constant.
+ */
+export const SDK_BOOTSTRAP_URL =
+  "https://static.matterport.com/showcase-sdk/bootstrap/3.0.0-0-g0517b8d76c/sdk.es6.js" +
+  `?applicationKey=${MATTERPORT_SDK_KEY}`;
 
 /**
  * Showcase URL parameters that strip Matterport's own chrome.
@@ -139,9 +172,9 @@ export const RETRY_WINDOW_MS = RETRY_WINDOW_HOURS * 60 * 60 * 1000;
  * level attainable whether the mall has two pins or twenty.
  */
 export const LEVEL_BANDS = [
-  { level: 1, at: 0, label: "Visiteur" },
-  { level: 2, at: 0.15, label: "Explorateur" },
-  { level: 3, at: 0.35, label: "Connaisseur" },
-  { level: 4, at: 0.6, label: "Expert" },
-  { level: 5, at: 0.85, label: "Champion" },
+  { level: 1, at: 0, label: { fr: "Visiteur", en: "Visitor" } },
+  { level: 2, at: 0.15, label: { fr: "Explorateur", en: "Explorer" } },
+  { level: 3, at: 0.35, label: { fr: "Connaisseur", en: "Connoisseur" } },
+  { level: 4, at: 0.6, label: { fr: "Expert", en: "Expert" } },
+  { level: 5, at: 0.85, label: { fr: "Champion", en: "Champion" } },
 ] as const;

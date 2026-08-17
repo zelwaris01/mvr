@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MpSdk } from "@matterport/sdk";
-import { MATTERPORT_SDK_KEY } from "./constants";
+import { MATTERPORT_SDK_KEY, SDK_BOOTSTRAP_URL } from "./constants";
 import { resolveStoreByTag } from "./tour-zones";
 import { nearestSweep, viewpointFor } from "./tour-nav";
 import type { TagRecord } from "./roster";
@@ -12,6 +12,16 @@ export type TourStatus =
   | "connecting"
   | "ready"
   | "error";
+
+/**
+ * How far the player has got, for the loading veil to report.
+ *
+ * `status` cannot answer this: it stays "connecting" for the whole load, which
+ * on a cold cache is ten seconds or more of a screen that looks identical at
+ * second one and second nine. These are Matterport's own App.Phase values,
+ * narrowed to the three that mean something to a visitor.
+ */
+export type TourPhase = "connecting" | "loading" | "starting" | "playing";
 
 type Options = {
   /** Which level's scan to connect to. Changing it reconnects. */
@@ -23,13 +33,6 @@ type Options = {
   /** How long they must stay put before entering counts. */
   dwellMs?: number;
 };
-
-/**
- * The SDK bootstrap, which exports `connect` directly.
- * Verified reachable with `Access-Control-Allow-Origin: http://localhost:3000`.
- */
-const SDK_BOOTSTRAP =
-  "https://static.matterport.com/showcase-sdk/bootstrap/3.0.0-0-g0517b8d76c/sdk.es6.js";
 
 /**
  * Imports a module from an absolute URL at runtime.
@@ -49,15 +52,45 @@ const importFromUrl = (url: string): Promise<Record<string, unknown>> =>
 type ConnectFn = (iframe: HTMLIFrameElement) => Promise<MpSdk>;
 
 /**
- * Connects to the tour iframe, preferring the npm package and falling back to
- * the hosted bootstrap. Both end at the same `MpSdk`; they differ only in how
- * the remote SDK client gets loaded.
+ * Connects to the tour iframe, preferring the hosted bootstrap and falling
+ * back to the npm package. Both end at the same `MpSdk`; they differ only in
+ * how the remote SDK client gets loaded.
+ *
+ * The order used to be the other way round, which cost every visitor a failed
+ * attempt before the working one: @matterport/sdk's loader performs the same
+ * runtime import through a path the bundler rewrites into its own registry, so
+ * under Turbopack it cannot resolve an https URL and always throws. Only then
+ * did the bootstrap get fetched — after the package chunk had been downloaded
+ * and run for nothing. The package stays as the fallback in case a future
+ * bundler makes that path work again; it is now behind a dynamic import that
+ * a normal load never reaches, so it costs nothing until it is needed.
  */
 async function connectToShowcase(
   iframe: HTMLIFrameElement,
   spaceId: string
 ): Promise<MpSdk> {
   try {
+    // Preloaded from the document head, so this normally resolves out of cache.
+    // The iframe src already carries applicationKey, so connect() can attach.
+    const mod = await importFromUrl(SDK_BOOTSTRAP_URL);
+    const connect = mod.connect as ConnectFn | undefined;
+    if (typeof connect !== "function") {
+      throw new Error(
+        `SDK bootstrap loaded but exported no connect(): ${Object.keys(mod).join(", ")}`
+      );
+    }
+    const sdk = await connect(iframe);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[tour] connected via hosted bootstrap");
+    }
+    return sdk;
+  } catch (bootstrapErr) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[tour] hosted bootstrap failed, trying @matterport/sdk:",
+        bootstrapErr
+      );
+    }
     const { setupSdk } = await import("@matterport/sdk");
     // No iframeQueryParams here: the iframe's src already carries them (see
     // tourUrlFor), which is the only place that works on both the setupSdk
@@ -68,28 +101,6 @@ async function connectToShowcase(
     });
     if (process.env.NODE_ENV !== "production") {
       console.log("[tour] connected via @matterport/sdk");
-    }
-    return sdk;
-  } catch (pkgErr) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(
-        "[tour] @matterport/sdk loader failed, trying hosted bootstrap:",
-        pkgErr
-      );
-    }
-    // The iframe src already carries applicationKey, so connect() can attach.
-    const mod = await importFromUrl(
-      `${SDK_BOOTSTRAP}?applicationKey=${MATTERPORT_SDK_KEY}`
-    );
-    const connect = mod.connect as ConnectFn | undefined;
-    if (typeof connect !== "function") {
-      throw new Error(
-        `SDK bootstrap loaded but exported no connect(): ${Object.keys(mod).join(", ")}`
-      );
-    }
-    const sdk = await connect(iframe);
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[tour] connected via hosted bootstrap");
     }
     return sdk;
   }
@@ -110,6 +121,7 @@ export function useMatterportTour(
   const [status, setStatus] = useState<TourStatus>(
     MATTERPORT_SDK_KEY ? "connecting" : "disabled"
   );
+  const [phase, setPhase] = useState<TourPhase>("connecting");
   const [tags, setTags] = useState<TagRecord[]>([]);
 
   /**
@@ -155,8 +167,14 @@ export function useMatterportTour(
     const sweepIndex = new Map<string, string>();
     /** Pins we've already switched off, so re-notification doesn't loop. */
     const suppressed = new Set<string>();
-    /** attachmentId -> image url, from the pin's own media. */
-    const media = new Map<string, string>();
+    /**
+     * attachmentId -> the pin's own media, with its kind.
+     *
+     * The kind is carried rather than filtered on arrival, because an
+     * attachment's type can be corrected after it lands (see takeAttachment)
+     * and because images and videos end up in different fields.
+     */
+    const media = new Map<string, { src: string; kind: "image" | "video" }>();
     /** tagId -> its attachment ids, so late-arriving media can be matched up. */
     const tagMedia = new Map<string, string[]>();
     const handled = new Set<string>();
@@ -226,6 +244,31 @@ export function useMatterportTour(
         connected = mpSdk;
         sdkRef.current = mpSdk;
 
+        // Subscribed before the wait below, not after it — the whole point is
+        // to report progress *during* the load, and by the time `waitUntil`
+        // resolves there is no progress left to report.
+        subs.push(
+          mpSdk.App.state.subscribe((appState) => {
+            if (cancelled) return;
+            switch (appState.phase) {
+              case mpSdk.App.Phase.LOADING:
+                setPhase("loading");
+                break;
+              case mpSdk.App.Phase.STARTING:
+                setPhase("starting");
+                break;
+              case mpSdk.App.Phase.PLAYING:
+                setPhase("playing");
+                break;
+              // UNINITIALIZED, WAITING and ERROR say nothing a visitor can act
+              // on — the veil stays on "connecting", and a real failure is
+              // reported through `status` instead.
+              default:
+                break;
+            }
+          })
+        );
+
         // Wait for the player to actually be playing. `connect` resolving is
         // earlier than that, and any Sweep.moveTo issued in the gap rejects —
         // so `status === "ready"` has to mean "safe to command", or every
@@ -276,17 +319,26 @@ export function useMatterportTour(
           for (const [tagId, attachmentIds] of tagMedia) {
             const tag = tagsRef.get(tagId);
             if (!tag) continue;
-            const srcs: string[] = [];
+            const images: string[] = [];
+            const videos: string[] = [];
             for (const attachmentId of attachmentIds) {
-              const src = media.get(attachmentId);
-              if (src) srcs.push(src);
+              const item = media.get(attachmentId);
+              if (!item) continue;
+              // The model's own order is preserved within each kind, which is
+              // what keeps the first image being the brand's logo.
+              if (item.kind === "video") videos.push(item.src);
+              else images.push(item.src);
             }
-            if (srcs.length !== tag.media.length) {
-              tag.media = srcs;
+            if (
+              images.length !== tag.media.length ||
+              videos.length !== tag.videos.length
+            ) {
+              tag.media = images;
+              tag.videos = videos;
               changed = true;
               if (process.env.NODE_ENV !== "production") {
                 console.warn(
-                  `[tour] "${tag.label}": ${srcs.length} image(s) du modèle`
+                  `[tour] "${tag.label}": ${images.length} image(s), ${videos.length} vidéo(s) du modèle`
                 );
               }
             }
@@ -331,13 +383,15 @@ export function useMatterportTour(
             return;
           }
 
-          const slug = resolveStoreByTag(id, label);
+          const match = resolveStoreByTag(id, label);
+          const slug = match?.slug ?? null;
           tagsRef.set(id, {
             tagId: id,
             label,
             slug,
             description,
             media: [],
+            videos: [],
             discPosition: {
               x: discPosition.x,
               y: discPosition.y,
@@ -347,8 +401,10 @@ export function useMatterportTour(
             stemVector: { x: stem.x, y: stem.y, z: stem.z },
             sweepId: null,
           });
-          // A pin that names no shop is dead weight in this app, and is what
-          // the promotional billboards hang off. Take it out of the scene.
+          // Only pins on the ignore list get here now — see resolveStoreByTag.
+          // Those are the promotional billboards and the quiz teaser, which
+          // dock themselves open over the storefronts. Everything else is a
+          // shop, catalogued or not, and stays.
           if (!slug) removeNative(id);
 
           if (attachmentIds.length > 0) tagMedia.set(id, attachmentIds);
@@ -358,8 +414,21 @@ export function useMatterportTour(
             // forwards warn/error from the browser to the dev server terminal,
             // and a pin the model has but the app can't place is exactly the
             // thing worth seeing without opening devtools.
-            if (slug) console.log(`[tour] tag ${id} "${label}" -> ${slug}`);
-            else console.warn(`[tour] UNMATCHED tag ${id} "${label}"`);
+            if (!match) {
+              console.log(`[tour] ignored tag ${id} "${label}"`);
+            } else if (match.known) {
+              console.log(`[tour] tag ${id} "${label}" -> ${match.slug}`);
+            } else {
+              // console.warn, so Next forwards it to the dev terminal. Not an
+              // error — this pin now works — but it is how you notice a shop
+              // that could be given a quiz, or a non-shop pin that belongs on
+              // the ignore list in tour-zones.
+              console.warn(
+                `[tour] AUTO-ADDED "${label}" as "${match.slug}" — ` +
+                  `no catalogue entry, so no quiz and no reward. ` +
+                  `Add one to stores-data.ts, or to IGNORED_LABEL_KEYS if it is not a shop.`
+              );
+            }
           }
 
           // Resolve this pin's sweep now, if the sweeps are already in.
@@ -460,21 +529,44 @@ export function useMatterportTour(
           })
         );
 
-        // Pin media — the brand logos the model already carries. Far better
-        // than the stock thumbnails in the catalogue, and maintained by
-        // whoever keeps the scan current.
+        /**
+         * Pin media — the logos, photos and now videos the model already
+         * carries. Far better than the stock thumbnails in the catalogue, and
+         * maintained by whoever keeps the scan current.
+         *
+         * Two things this gets right that the previous version did not:
+         *
+         *  - VIDEO is kept. It used to filter to IMAGE, so a video attached in
+         *    Workshop was silently thrown away.
+         *  - `onUpdated` is handled. The SDK documents AttachmentType.UNKNOWN
+         *    as the placeholder "until oEmbed resolves the actual type", so an
+         *    attachment can arrive typeless and be corrected a moment later.
+         *    Subscribing to onAdded alone dropped exactly those.
+         */
+        const takeAttachment = (id: string, attachment: MpSdk.Tag.Attachment) => {
+          if (!attachment.src) return;
+          const kind =
+            attachment.type === mpSdk.Tag.AttachmentType.VIDEO
+              ? "video"
+              : attachment.type === mpSdk.Tag.AttachmentType.IMAGE
+              ? "image"
+              : null;
+          // Anything else — PDF, rich embeds, sandboxes — has no place to go in
+          // this UI yet. Ignored rather than guessed at.
+          if (!kind) return;
+          const known = media.get(id);
+          if (known && known.src === attachment.src && known.kind === kind) {
+            return;
+          }
+          media.set(id, { src: attachment.src, kind });
+          resolveMedia();
+        };
+
         try {
           subs.push(
             mpSdk.Tag.attachments.subscribe({
-              onAdded(id, attachment) {
-                if (
-                  attachment.src &&
-                  attachment.type === mpSdk.Tag.AttachmentType.IMAGE
-                ) {
-                  media.set(id, attachment.src);
-                  resolveMedia();
-                }
-              },
+              onAdded: takeAttachment,
+              onUpdated: takeAttachment,
             })
           );
         } catch (err) {
@@ -596,11 +688,12 @@ export function useMatterportTour(
       setTags([]);
       currentSweepRef.current = null;
       setStatus(MATTERPORT_SDK_KEY ? "connecting" : "disabled");
+      setPhase("connecting");
       // Deliberately not re-enabling the native pins: that would race the
       // disconnect, and the iframe is being torn down anyway.
       connected?.disconnect?.();
     };
   }, [iframeRef, spaceId, dwellMs]);
 
-  return { status, tags, sdk, sdkRef, currentSweepRef };
+  return { status, phase, tags, sdk, sdkRef, currentSweepRef };
 }

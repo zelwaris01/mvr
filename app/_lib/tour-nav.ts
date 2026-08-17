@@ -104,18 +104,34 @@ export function viewpointFor(anchor: Vec3, stem: Vec3): Vec3 {
 }
 
 /**
+ * Total degrees of turning allowed to frame one shopfront.
+ *
+ * Nothing is ever more than 180° away — turn further and you are going the
+ * long way round to somewhere you could have reached by turning the other
+ * way. The old loop had no budget at all: it corrected a target behind the
+ * camera in blind 90° steps, five iterations deep, so an arrival facing away
+ * from the shop span most of a full circle before it settled. Landing a few
+ * degrees off centre is a far better outcome than a pirouette.
+ */
+const MAX_TURN_DEG = 180;
+
+/**
  * Turns the camera until `target` is centred on screen.
  *
  * Every previous attempt here computed a heading from trigonometry and hoped
  * Matterport's yaw convention matched — which is how clicking Women'Secret
- * ended up framing Springfield. The convention is undocumented, and guessing
- * its sign is a coin flip that stays wrong until someone notices.
+ * ended up framing Springfield. `Camera.rotate` documents its own sign
+ * (positive is clockwise) but says nothing about how `pose.rotation.y` relates
+ * to world coordinates, and guessing that is a coin flip that stays wrong until
+ * someone notices.
  *
  * This asks the question the other way round: project the target with the
  * SDK's own `worldToScreen`, see how far off centre it lands, and rotate to
  * close the gap. The sign is discovered rather than assumed — if the first
- * nudge makes things worse, the direction flips and the loop carries on. A
- * couple of iterations settle it, and it is correct for any model.
+ * nudge makes things worse, the direction flips and the loop carries on.
+ *
+ * Every turn is now drawn from a shared budget, so the discovery can cost at
+ * most a wasted fraction of one turn rather than an extra lap.
  */
 export async function aimAt(
   sdk: MpSdk,
@@ -133,30 +149,53 @@ export async function aimAt(
   const TOLERANCE = size.w * 0.035;
   const scratch = { x: 0, y: 0, z: 0 };
 
+  let spent = 0; // degrees of travel used, whichever way it went
   let direction = 1;
   let previousError = Infinity;
+
+  /**
+   * Turns by at most what is left of the budget. Returns false when there is
+   * nothing left to spend, which ends the loop where it stands rather than
+   * carrying on with turns that would breach the cap.
+   */
+  const turn = async (degrees: number): Promise<boolean> => {
+    const remaining = MAX_TURN_DEG - spent;
+    if (remaining <= 0.5) return false;
+    const capped = Math.max(-remaining, Math.min(remaining, degrees));
+    if (Math.abs(capped) < 0.5) return false;
+    await sdk.Camera.rotate(capped, 0, { speed: 220 });
+    spent += Math.abs(capped);
+    return true;
+  };
 
   for (let i = 0; i < 5; i++) {
     const pose = await sdk.Camera.pose.waitUntil(() => true);
     sdk.Conversion.worldToScreen(target, pose, size, scratch);
 
-    // Behind the camera: no meaningful screen error to read, so swing round
-    // and re-measure rather than chasing a mirrored coordinate.
+    const offset = scratch.x - size.w / 2;
+
+    // Behind the camera. A perspective projection mirrors what is behind the
+    // eye, so the side it reports is the wrong one and negating it is the way
+    // to turn; if that is not true of this build, the flip-on-worse below
+    // still recovers, only now out of a budget rather than out of five free
+    // 90° swings.
+    // 140°, not 90°: one turn should bring a target that is behind you into
+    // view, leaving the rest of the budget for the fine correction. Repeated
+    // 90° steps were what turned a wrong first guess into a full circle.
     if (!(scratch.z > 0 && scratch.z < 1)) {
-      await sdk.Camera.rotate(90 * direction, 0, { speed: 220 });
+      const side = isFinite(offset) ? (offset >= 0 ? -1 : 1) : direction;
+      if (!(await turn(140 * side))) return;
       continue;
     }
 
-    const error = scratch.x - size.w / 2;
-    if (!isFinite(error)) return; // projection failed — leave the camera be
-    if (Math.abs(error) <= TOLERANCE) return;
+    if (!isFinite(offset)) return; // projection failed — leave the camera be
+    if (Math.abs(offset) <= TOLERANCE) return;
 
     // Got worse after a turn? The convention runs the other way.
-    if (Math.abs(error) > Math.abs(previousError)) direction = -direction;
-    previousError = error;
+    if (Math.abs(offset) > Math.abs(previousError)) direction = -direction;
+    previousError = offset;
 
-    const degrees = (error / size.w) * APPROX_HFOV_DEG * direction;
-    await sdk.Camera.rotate(degrees, 0, { speed: 220 });
+    if (!(await turn((offset / size.w) * APPROX_HFOV_DEG * direction))) return;
   }
 }
 

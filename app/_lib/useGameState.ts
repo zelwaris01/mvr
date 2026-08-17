@@ -9,6 +9,7 @@ import {
   XP_PER_STORE_VISIT,
 } from "./constants";
 import { useLocalStorage } from "./useLocalStorage";
+import { useLocale } from "./i18n";
 import {
   buildLevels,
   calculateLevel,
@@ -97,6 +98,9 @@ function evaluateBadge(
 export function useGameState() {
   const [progress, setProgress, isHydrated, removeProgress] =
     useLocalStorage<UserProgress>(STORAGE_KEY, DEFAULT_PROGRESS);
+  // Only the rank names are language-dependent; the thresholds are not, so a
+  // switch renames the level without moving anybody up or down it.
+  const { locale } = useLocale();
 
   // Read inside setProgress updaters, where a state value would be stale.
   const rosterRef = useRef<RosterFacts>(EMPTY_ROSTER);
@@ -252,7 +256,7 @@ export function useGameState() {
     [progress]
   );
 
-  const levels = buildLevels(maxXp);
+  const levels = buildLevels(maxXp, locale);
   const level = calculateLevel(progress.totalXp, levels);
   const nextLevel = getNextLevel(progress.totalXp, levels);
   const levelProgress = getLevelProgress(progress.totalXp, levels);

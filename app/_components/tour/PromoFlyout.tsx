@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { AD, useAdDismissed } from "@/app/_lib/ad";
+import { useLocale } from "@/app/_lib/i18n";
 import { RewardsCta } from "./RewardsCta";
 import { usePress } from "@/app/_lib/usePress";
 
@@ -17,6 +18,7 @@ import { usePress } from "@/app/_lib/usePress";
  * this now does the same.
  */
 export function PromoFlyout({ onClose }: { onClose: () => void }) {
+  const { t } = useLocale();
   const [adDismissed, dismissAd] = useAdDismissed();
   const closePress = usePress(onClose);
   const resumePress = usePress(onClose);
@@ -31,10 +33,10 @@ export function PromoFlyout({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div className="profile" role="region" aria-label="Offres du mall">
+    <div className="profile" role="region" aria-label={t("offersRegion")}>
       <button
         {...closePress}
-        aria-label="Fermer"
+        aria-label={t("close")}
         className="fixed right-5 top-5 z-10 w-11 h-11 rounded-full pane grid place-items-center text-ink-2 hover:text-brass transition-colors safe-x"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -44,7 +46,7 @@ export function PromoFlyout({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-2.5 mt-2">
           <span className="w-[3px] h-4 rounded-full bg-brass" />
           <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-ink-2">
-            Offres du moment
+            {t("offersTitle")}
           </h2>
         </div>
 
@@ -52,7 +54,7 @@ export function PromoFlyout({ onClose }: { onClose: () => void }) {
           <div className="relative rounded-2xl border border-line overflow-hidden bg-surface-1">
             <button
               {...dismissPress}
-              aria-label="Masquer cette publicité"
+              aria-label={t("hideAd")}
               className="absolute right-3 top-3 z-10 w-10 h-10 rounded-full grid place-items-center bg-[rgba(11,10,9,.72)] text-ink-2 hover:text-brass transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -78,7 +80,7 @@ export function PromoFlyout({ onClose }: { onClose: () => void }) {
               </span>
             </a>
             <span className="block px-4 sm:px-5 pb-3 text-[8.5px] uppercase tracking-[0.16em] text-ink-3">
-              Publicité
+              {t("advertisement")}
             </span>
           </div>
         )}
@@ -86,7 +88,7 @@ export function PromoFlyout({ onClose }: { onClose: () => void }) {
         <RewardsCta />
 
         <button {...resumePress} className="btn btn-ghost self-start mt-2">
-          Reprendre la visite
+          {t("resumeTour")}
         </button>
       </div>
     </div>

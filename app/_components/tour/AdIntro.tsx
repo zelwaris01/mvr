@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { AD, useAdDismissed } from "@/app/_lib/ad";
+import { useLocale } from "@/app/_lib/i18n";
 import { usePress } from "@/app/_lib/usePress";
 import { RewardsCta } from "./RewardsCta";
 
@@ -22,6 +23,7 @@ import { RewardsCta } from "./RewardsCta";
  * reappearing on every floor switch — those remount the whole tour.
  */
 export function AdIntro() {
+  const { t } = useLocale();
   const [dismissed, dismiss] = useAdDismissed();
   const scrimPress = usePress(dismiss);
   const closePress = usePress(dismiss);
@@ -40,15 +42,15 @@ export function AdIntro() {
     <div className="ad-slot">
       <button
         {...scrimPress}
-        aria-label="Fermer la publicité"
+        aria-label={t("closeAd")}
         tabIndex={-1}
         className="ad-scrim"
       />
 
-      <div className="ad-card" role="dialog" aria-label="Publicité">
+      <div className="ad-card" role="dialog" aria-label={t("advertisement")}>
         <button
           {...closePress}
-          aria-label="Fermer la publicité"
+          aria-label={t("closeAd")}
           className="absolute right-3 top-3 z-10 w-10 h-10 rounded-full grid place-items-center bg-[rgba(11,10,9,.72)] text-ink-2 hover:text-brass transition-colors"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -75,9 +77,9 @@ export function AdIntro() {
         </a>
 
         <span className="flex items-center justify-between px-4 pb-3 text-[8.5px] uppercase tracking-[0.16em] text-ink-3">
-          <span>Publicité</span>
+          <span>{t("advertisement")}</span>
           <span className="normal-case tracking-normal text-[10px]">
-            Touchez ailleurs pour fermer
+            {t("tapElsewhere")}
           </span>
         </span>
 

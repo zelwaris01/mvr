@@ -97,6 +97,21 @@ function BurgerButton({ onPress }: { onPress: () => void }) {
  * jumps to the next target, which reads as progress; one that runs late creeps
  * rather than freezing, which is the failure mode being fixed.
  */
+/**
+ * The four beats shown while the model downloads, one per second.
+ *
+ * A full pass is 4s and the load is usually longer, so it loops rather than
+ * stopping on the last word — a line that freezes reads as a stall, which is
+ * the exact impression the rest of this veil exists to avoid.
+ */
+const VEIL_WORDS: UiKey[] = [
+  "veilExplore",
+  "veilDiscover",
+  "veilPlay",
+  "veilWin",
+];
+const WORD_MS = 1000;
+
 const VEIL_STEPS: Record<
   TourPhase,
   { pct: number; ms: number; label: UiKey }
@@ -143,6 +158,19 @@ export function TourVeil({
     return () => clearTimeout(t);
   }, []);
 
+  // One word per second, stopping the moment the veil starts to leave — there
+  // is no point paying for a timer during the hand-off, and a word changing
+  // while the whole block flies up to the top bar is noise.
+  const [wordIndex, setWordIndex] = useState(0);
+  useEffect(() => {
+    if (leaving) return;
+    const id = setInterval(
+      () => setWordIndex((i) => (i + 1) % VEIL_WORDS.length),
+      WORD_MS
+    );
+    return () => clearInterval(id);
+  }, [leaving]);
+
   // Self-managing, and keyed on the level by the caller, so switching floor
   // remounts it. Previously the screen retired the veil once and never
   // brought it back — so every load after the first showed Matterport's own
@@ -169,6 +197,16 @@ export function TourVeil({
         <span className="text-ink-3 text-[9px] sm:text-[10px] uppercase tracking-[0.22em] leading-none whitespace-nowrap">
           By MVR World
         </span>
+
+        {/* Keyed on the index so React replaces the element rather than
+            editing its text — that is what lets the enter animation replay on
+            every word instead of firing once. */}
+        <span className="veil-words">
+          <span key={wordIndex} className="veil-word">
+            {t(VEIL_WORDS[wordIndex])}
+          </span>
+        </span>
+
         <span className="veil-bar">
           <span
             className="veil-bar-fill"

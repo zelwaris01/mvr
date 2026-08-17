@@ -431,8 +431,49 @@ button:disabled,
 .tour-veil-out .veil-mark {
   animation: mark-fly .7s cubic-bezier(.7, 0, .2, 1) forwards;
 }
+/* 50px, was 42px. The four-word line added 27px below the title (15px margin +
+   12px box), and the block is centred — so the title now starts 13.5px higher
+   than it did. That offset is measured from the block's centre, which the
+   scale shrinks: 13.5 x .625 = 8.4px. Giving the translate 8px back lands the
+   wordmark where it did before, on top of the real one in the top bar.
+   Change the block's height again and this needs the same arithmetic. */
 @keyframes mark-fly {
-  to { transform: translateY(calc(-50dvh + 42px)) scale(.625); }
+  to { transform: translateY(calc(-50dvh + 50px)) scale(.625); }
+}
+
+/* The four beats — Explorez / Découvrez / Jouez / Gagnez — one per second.
+   A fixed height, not `auto`: every word is one line, but letting the box size
+   itself would still reflow the bar below it by a fraction of a pixel on each
+   swap, and a progress bar that twitches once a second is worse than no
+   animation at all. */
+.veil-words {
+  margin-top: 15px;
+  height: 12px;
+  display: grid;
+  place-items: center;
+}
+.tour-veil-out .veil-words { opacity: 0; transition: opacity .25s ease; }
+.veil-word {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--brass);
+  white-space: nowrap;
+  /* letter-spacing adds a trailing gap after the last character, which pulls a
+     centred word visibly off-centre. Reclaiming one space puts it back. */
+  margin-right: -.3em;
+  animation: veil-word-in .42s cubic-bezier(.22,.61,.36,1) both;
+}
+@keyframes veil-word-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The words still change — that is information, not decoration. Only the
+     movement goes. */
+  .veil-word { animation: none; }
 }
 
 .veil-bar {

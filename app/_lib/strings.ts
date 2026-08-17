@@ -18,6 +18,13 @@ export const UI = {
   brandBy: { fr: "By MVR World", en: "By MVR World" },
 
   // ── Loading veil ──
+  // The promise of the visit, one word at a time while the model downloads.
+  // Same four beats as the poster, in the same order.
+  veilExplore: { fr: "Explorez", en: "Explore" },
+  veilDiscover: { fr: "Découvrez", en: "Discover" },
+  veilPlay: { fr: "Jouez", en: "Play" },
+  veilWin: { fr: "Gagnez", en: "Win" },
+
   loadConnecting: { fr: "Connexion à la visite", en: "Connecting to the tour" },
   loadLoading: { fr: "Chargement du mall", en: "Loading the mall" },
   loadStarting: { fr: "Préparation de la vue", en: "Preparing the view" },

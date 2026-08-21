@@ -1,145 +1,120 @@
 import type { Question } from "./types";
 
+/**
+ * The quiz, written only where the trade is not in doubt.
+ *
+ * Every question below is answerable from something the model itself carries —
+ * the pin's label, its links, or its own printed question — or from what the
+ * brand's own domain plainly says it sells. Nothing here is invented brand
+ * history, which is why nine of the fifteen shops have no questions at all:
+ * RAZANA, LNKO, DUO ZOU LU, ROSABELLA and ALTI do not state their trade
+ * anywhere in the scan, and a wrong fact about a real business is worse than
+ * no quiz. The shop pages and the quiz hub already hide the quiz for those.
+ *
+ * SPRINGFIELD's question is the mall's own: the ground floor carries a
+ * billboard pin reading "SPRINGFIELD est originaire de quel pays ? A. USA
+ * B. Espagne C. Italie", reproduced here verbatim, options and order included.
+ *
+ * The carousel pin carries a second one — how many experience categories the
+ * Carrousel website lists — and it is deliberately NOT here: the answer cannot
+ * be checked from the model, and guessing between 6, 7 and 8 would ship a
+ * quiz that lies to the visitor.
+ */
 export const QUESTIONS: Question[] = [
   {
-    id: "q1",
-    storeSlug: "zara",
-    questionText: "En quelle année ZARA a-t-elle été fondée ?",
-    options: ["1965", "1975", "1985", "1995"],
-    correctIndex: 1,
+    id: "electroplanet-1",
+    storeSlug: "electroplanet",
+    questionText: "Que vend ELECTROPLANET ?",
+    options: [
+      "De l'électroménager et de l'électronique",
+      "Des vêtements de sport",
+      "Des cosmétiques",
+      "Des chaussures",
+    ],
+    correctIndex: 0,
     explanation:
-      "ZARA a été fondée en 1975 par Amancio Ortega à La Corogne, en Espagne.",
+      "ELECTROPLANET est une enseigne d'électroménager et d'électronique grand public — climatiseurs, réfrigérateurs, télévisions.",
     xpReward: 50,
   },
   {
-    id: "q2",
-    storeSlug: "zara",
-    questionText: "Quel est le groupe propriétaire de ZARA ?",
-    options: ["H&M Group", "Inditex", "LVMH", "Kering"],
-    correctIndex: 1,
-    explanation:
-      "ZARA appartient au groupe Inditex, le plus grand détaillant de mode au monde.",
-    xpReward: 50,
-  },
-  {
-    id: "q3",
-    storeSlug: "sephora",
-    questionText: "Dans quel pays SEPHORA a-t-elle été créée ?",
-    options: ["États-Unis", "Italie", "France", "Espagne"],
-    correctIndex: 2,
-    explanation:
-      "SEPHORA a été fondée en France en 1970 par Dominique Mandonnaud.",
-    xpReward: 50,
-  },
-  {
-    id: "q4",
-    storeSlug: "sephora",
+    id: "electroplanet-2",
+    storeSlug: "electroplanet",
     questionText:
-      "Quel concept SEPHORA a-t-elle popularisé dans l'industrie de la beauté ?",
+      "Que propose la fiche ELECTROPLANET du mall, en plus de l'achat en ligne ?",
     options: [
-      "La vente en ligne",
-      "Le libre-service en parfumerie",
-      "Les échantillons gratuits",
-      "Les tutoriels vidéo",
+      "Un chèque cadeau",
+      "Un atelier de réparation",
+      "Une carte de fidélité",
+      "Un service de livraison en 1 heure",
     ],
-    correctIndex: 1,
-    explanation:
-      "SEPHORA a révolutionné la beauté en permettant aux clients de tester librement les produits en magasin.",
-    xpReward: 50,
-  },
-  {
-    id: "q5",
-    storeSlug: "nike",
-    questionText: "Que signifie le nom « Nike » ?",
-    options: [
-      "Force",
-      "Vitesse",
-      "Déesse grecque de la victoire",
-      "Champion",
-    ],
-    correctIndex: 2,
-    explanation:
-      "Nike tire son nom de Niké, la déesse grecque de la victoire.",
-    xpReward: 50,
-  },
-  {
-    id: "q6",
-    storeSlug: "nike",
-    questionText: "Quel est le slogan emblématique de Nike ?",
-    options: ["Just Do It", "Impossible Is Nothing", "Run Fast", "Be Strong"],
     correctIndex: 0,
     explanation:
-      "« Just Do It » est le slogan iconique de Nike depuis 1988.",
+      "Sa fiche porte deux liens : « Acheter en ligne » et « Offrez un Chèque Cadeau ».",
     xpReward: 50,
   },
   {
-    id: "q7",
-    storeSlug: "mango",
-    questionText: "Dans quelle ville MANGO a-t-elle son siège social ?",
-    options: ["Madrid", "Barcelone", "Paris", "Milan"],
-    correctIndex: 1,
-    explanation:
-      "MANGO a été fondée et a son siège à Barcelone, en Espagne.",
-    xpReward: 50,
-  },
-  {
-    id: "q8",
-    storeSlug: "guess",
-    questionText: "Dans quel pays GUESS a-t-elle été fondée ?",
-    options: ["France", "Italie", "États-Unis", "Royaume-Uni"],
-    correctIndex: 2,
-    explanation:
-      "GUESS a été fondée en 1981 à Los Angeles par les frères Marciano.",
-    xpReward: 50,
-  },
-  {
-    id: "q9",
-    storeSlug: "flo",
-    questionText: "Quel type de produits FLO propose-t-elle principalement ?",
+    id: "planet-sport-1",
+    storeSlug: "planet-sport",
+    questionText: "Quel type d'articles trouve-t-on chez PLANET SPORT ?",
     options: [
-      "Vêtements de sport",
-      "Chaussures et accessoires",
-      "Cosmétiques",
-      "Électronique",
+      "Des articles de sport",
+      "Du mobilier",
+      "Des parfums",
+      "De l'électroménager",
     ],
-    correctIndex: 1,
-    explanation:
-      "FLO est spécialisée dans les chaussures et accessoires de mode.",
-    xpReward: 50,
-  },
-  {
-    id: "q10",
-    storeSlug: "birkenstock",
-    questionText: "Depuis quelle année BIRKENSTOCK fabrique-t-elle des chaussures ?",
-    options: ["1774", "1850", "1920", "1960"],
     correctIndex: 0,
     explanation:
-      "L'histoire de BIRKENSTOCK remonte à 1774, ce qui en fait l'une des plus anciennes marques de chaussures au monde.",
+      "PLANET SPORT est une enseigne d'articles et d'équipements de sport.",
     xpReward: 50,
   },
   {
-    id: "q11",
-    storeSlug: "paul",
-    questionText: "Quel est le produit signature de PAUL ?",
+    id: "faces-1",
+    storeSlug: "faces",
+    questionText: "Quelle est la spécialité de FACES ?",
     options: [
-      "Le macaron",
-      "Le pain de tradition",
-      "Le croissant",
-      "La tarte aux fruits",
+      "La beauté et les cosmétiques",
+      "La maroquinerie",
+      "L'électronique",
+      "La restauration",
     ],
-    correctIndex: 1,
-    explanation:
-      "PAUL est avant tout célèbre pour son pain de tradition française, fabriqué de manière artisanale.",
-    xpReward: 50,
-  },
-  {
-    id: "q12",
-    storeSlug: "paul",
-    questionText: "En quelle année la maison PAUL a-t-elle été fondée ?",
-    options: ["1889", "1921", "1950", "1975"],
     correctIndex: 0,
     explanation:
-      "La maison PAUL a été fondée en 1889 par Charlemagne Mayot dans le nord de la France.",
+      "FACES est une enseigne de beauté et de cosmétiques ; sa boutique en ligne est facesbeauty.ma.",
+    xpReward: 50,
+  },
+  {
+    id: "springfield-1",
+    storeSlug: "springfield",
+    questionText: "SPRINGFIELD est originaire de quel pays ?",
+    options: ["USA", "Espagne", "Italie"],
+    correctIndex: 1,
+    explanation:
+      "SPRINGFIELD est une marque espagnole. C'est la question posée par le panneau « CONNAISSEZ-VOUS LES MARQUES DU MALL ? » au rez-de-chaussée.",
+    xpReward: 50,
+  },
+  {
+    id: "womensecret-1",
+    storeSlug: "womensecret",
+    questionText: "Quelle catégorie de produits WOMEN'SECRET propose-t-elle ?",
+    options: [
+      "La lingerie et les vêtements de nuit",
+      "Les articles de sport",
+      "Le mobilier",
+      "L'électroménager",
+    ],
+    correctIndex: 0,
+    explanation:
+      "WOMEN'SECRET est une marque de lingerie et de vêtements de nuit, distribuée au Maroc par Vogue Retail Shop.",
+    xpReward: 50,
+  },
+  {
+    id: "sogno-1",
+    storeSlug: "sogno",
+    questionText: "Quelle est la spécialité de SOGNO, au premier étage ?",
+    options: ["Le tiramisu et le café", "Les sushis", "La pizza", "Les burgers"],
+    correctIndex: 0,
+    explanation:
+      "Son enseigne dans le modèle se lit « SOGNO - Tiramisu & Coffee ».",
     xpReward: 50,
   },
 ];

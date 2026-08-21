@@ -4,6 +4,7 @@ import { use, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { STORES } from "@/app/_lib/stores-data";
+import { LEVEL_LABELS } from "@/app/_lib/constants";
 import { QUESTIONS } from "@/app/_lib/questions-data";
 import { useGame } from "@/app/_components/GameStateProvider";
 
@@ -43,14 +44,10 @@ export default function StoreDetailPage({
   }
 
   const stats = [
-    { value: String(store.products.length), label: "pièces en vitrine" },
+    { value: String(store.gallery.length), label: "photos du modèle" },
     { value: String(storeQuestions.length), label: "questions du quiz" },
     { value: `${correctCount}/${storeQuestions.length || 1}`, label: "bonnes réponses" },
-    {
-      value: store.offers[0]?.discount ?? "—",
-      label: store.offers[0] ? "offre en cours" : "pas d'offre",
-      accent: true,
-    },
+    { value: store.level, label: LEVEL_LABELS[store.level], accent: true },
   ];
 
   return (
@@ -64,9 +61,9 @@ export default function StoreDetailPage({
         <div className="flex flex-col gap-7 md:gap-[30px]">
           {/* ── Hero plate ── */}
           <div className="plate relative h-[240px] md:h-[290px] rounded-[14px] border border-line">
-            {store.products[0] && (
+            {store.gallery[0] && (
               <Image
-                src={store.products[0].image}
+                src={store.gallery[0]}
                 alt={store.name}
                 fill
                 className="object-cover opacity-45"
@@ -125,36 +122,41 @@ export default function StoreDetailPage({
 
           {/* ── Collection ── */}
           <div className="flex items-end justify-between gap-4">
-            <h2 className="font-display text-[26px] leading-none text-ink">La collection</h2>
+            <h2 className="font-display text-[26px] leading-none text-ink">
+              La galerie
+            </h2>
             <span className="text-[11px] uppercase tracking-[0.1em] text-ink-3">
-              {store.products.length} pièces
+              {store.gallery.length} photo{store.gallery.length === 1 ? "" : "s"} du
+              modèle
             </span>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {store.products.map((product) => (
-              <div key={product.id} className="group flex flex-col gap-3">
-                <div className="plate relative aspect-[4/5] rounded-[10px] border border-line group-hover:border-brass-line transition-colors">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-cover group-hover:scale-[1.04] transition-transform duration-500"
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                  />
-                  <div className="brass-glow" />
+          {store.gallery.length > 0 ? (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {store.gallery.map((src, i) => (
+                <div key={src} className="group flex flex-col gap-3">
+                  <div className="plate relative aspect-[4/5] rounded-[10px] border border-line group-hover:border-brass-line transition-colors">
+                    <Image
+                      src={src}
+                      alt={`${store.name} — photo ${i + 1}`}
+                      fill
+                      className="object-cover group-hover:scale-[1.04] transition-transform duration-500"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                    />
+                    <div className="brass-glow" />
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[13px] font-semibold text-ink leading-[1.2]">
-                    {product.name}
-                  </span>
-                  <span className="text-[12px] text-ink-3 leading-none tabular-nums">
-                    {product.price}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            /* Two pins carry no attachment at all — the carousel and Summer
+               Market. Saying so beats an empty grid that reads as a bug. */
+            <div className="card p-6 text-center">
+              <p className="text-[12.5px] leading-[1.6] text-ink-3">
+                Aucune photo sur ce point d&apos;intérêt dans le modèle.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* ════ Sidebar ════ */}
@@ -168,7 +170,7 @@ export default function StoreDetailPage({
             <div className="h-px bg-line" />
             {[
               { k: "Catégorie", v: store.category },
-              { k: "Horaires", v: "10:00 — 22:00" },
+              { k: "Niveau", v: LEVEL_LABELS[store.level] },
               { k: "Statut", v: explored ? "Visitée" : "Non visitée" },
             ].map((row) => (
               <div key={row.k} className="flex justify-between text-[12.5px]">
@@ -178,21 +180,23 @@ export default function StoreDetailPage({
             ))}
           </div>
 
-          {/* Offers */}
-          {store.offers.map((offer) => (
-            <div
-              key={offer.id}
-              className="p-5 rounded-xl border border-brass-line bg-brass-soft flex flex-col gap-2.5"
-            >
-              <span className="eyebrow">Offre membre · {offer.discount}</span>
-              <span className="font-display text-[21px] leading-[1.2] text-ink">
-                {offer.title}
-              </span>
-              <p className="text-[11.5px] leading-[1.6] text-ink-2 text-pretty">
-                {offer.description}
-              </p>
+          {/* The pin's own links — the mall wrote these, not us. */}
+          {store.links.length > 0 && (
+            <div className="p-5 rounded-xl border border-brass-line bg-brass-soft flex flex-col gap-2.5">
+              <span className="eyebrow">Depuis la fiche du mall</span>
+              {store.links.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[12.5px] leading-[1.5] text-ink hover:text-brass transition-colors underline decoration-brass-line underline-offset-4"
+                >
+                  {link.label} →
+                </a>
+              ))}
             </div>
-          ))}
+          )}
 
           {/* Quiz */}
           {storeQuestions.length > 0 && (

@@ -4,27 +4,38 @@ import Link from "next/link";
 import Image from "next/image";
 import { STORES } from "@/app/_lib/stores-data";
 import { REWARDS } from "@/app/_lib/rewards-data";
-import { MATTERPORT_URL, TOTAL_QUESTIONS, TOTAL_STORES } from "@/app/_lib/constants";
+import {
+  LEVEL_LABELS,
+  MATTERPORT_URL,
+  TOTAL_QUESTIONS,
+  TOTAL_STORES,
+} from "@/app/_lib/constants";
 import { useGame } from "@/app/_components/GameStateProvider";
 import { StoreCard } from "@/app/_components/StoreCard";
 import { SectionTitle } from "@/app/_components/SectionTitle";
 import { ProgressRing } from "@/app/_components/ProgressRing";
 
-/** Six pieces pulled across the mall — the "trending" editorial rail. */
-const TRENDING = STORES.flatMap((store) =>
-  store.products.slice(0, 1).map((product) => ({ store, product }))
-).slice(0, 6);
+/**
+ * Six shopfronts pulled across the mall — the editorial rail.
+ *
+ * The lead photo of each pin that carries one. Shops whose pin has no
+ * attachment (the carousel, Summer Market) drop out rather than render an
+ * empty plate.
+ */
+const TRENDING = STORES.filter((store) => store.gallery.length > 0)
+  .slice(0, 6)
+  .map((store) => ({ store, image: store.gallery[0] }));
 
 const DESTINATIONS = [
   {
     href: "/tour",
-    eyebrow: "Niveau 0 — 2",
+    eyebrow: "Rez-de-chaussée & 1er étage",
     name: "La visite 360°",
     meta: "Parcourez le mall pièce par pièce",
   },
   {
     href: "/quiz",
-    eyebrow: "12 questions",
+    eyebrow: `${TOTAL_QUESTIONS} questions`,
     name: "Les défis",
     meta: "50 XP par bonne réponse",
   },
@@ -143,9 +154,9 @@ export default function HomePage() {
                   className="min-w-[168px] flex items-center gap-2.5 p-2.5 rounded-[10px] bg-card border border-line hover:border-brass-line transition-colors"
                 >
                   <div className="relative w-[38px] h-[38px] rounded-md overflow-hidden bg-surface-2 flex-shrink-0">
-                    {store.products[0] && (
+                    {store.gallery[0] && (
                       <Image
-                        src={store.products[0].image}
+                        src={store.gallery[0]}
                         alt={store.name}
                         fill
                         className="object-cover"
@@ -158,7 +169,7 @@ export default function HomePage() {
                       {store.name}
                     </span>
                     <span className="text-[10px] text-ink-3 leading-none">
-                      {store.products.length} pièces
+                      {LEVEL_LABELS[store.level]}
                     </span>
                   </div>
                 </Link>
@@ -182,7 +193,7 @@ export default function HomePage() {
         {/* ── Directory ── */}
         <section className="flex flex-col gap-6 md:gap-[26px]">
           <SectionTitle
-            eyebrow="Anfa Place · Niveau 1 & 2"
+            eyebrow="Anfa Place · Rez-de-chaussée & 1er étage"
             action={
               <div className="flex gap-1.5">
                 <span className="pill pill-on">Tout {TOTAL_STORES}</span>
@@ -205,30 +216,31 @@ export default function HomePage() {
         {/* ── Trending ── */}
         <section className="flex flex-col gap-6 md:gap-[26px]">
           <SectionTitle
-            eyebrow="En rayon aujourd'hui"
+            eyebrow="Relevé dans le modèle"
             action={
               <Link
                 href="/stores"
                 className="text-[11px] font-medium uppercase tracking-[0.1em] text-ink-3 hover:text-brass transition-colors"
               >
-                Parcourir les {STORES.reduce((n, s) => n + s.products.length, 0)} produits →
+                Parcourir les {STORES.reduce((n, s) => n + s.gallery.length, 0)}{" "}
+                photos →
               </Link>
             }
           >
-            Les pièces du moment
+            Les enseignes du mall
           </SectionTitle>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {TRENDING.map(({ store, product }, i) => (
+            {TRENDING.map(({ store, image }, i) => (
               <Link
-                key={product.id}
+                key={store.slug}
                 href={`/stores/${store.slug}`}
                 className="group flex flex-col gap-3"
               >
                 <div className="plate relative aspect-[4/5] rounded-xl border border-line group-hover:border-brass-line transition-colors">
                   <Image
-                    src={product.image}
-                    alt={product.name}
+                    src={image}
+                    alt={store.name}
                     fill
                     className="object-cover group-hover:scale-[1.04] transition-transform duration-500"
                     sizes="(max-width: 768px) 50vw, 16vw"
@@ -243,10 +255,10 @@ export default function HomePage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[12.5px] font-semibold text-ink leading-[1.25]">
-                    {product.name}
+                    {store.name}
                   </span>
-                  <span className="text-[11.5px] text-ink-3 leading-none tabular-nums">
-                    {product.price}
+                  <span className="text-[11.5px] text-ink-3 leading-none">
+                    {store.category} · {LEVEL_LABELS[store.level]}
                   </span>
                 </div>
               </Link>
@@ -263,10 +275,10 @@ export default function HomePage() {
               <span className="eyebrow">Le parcours du mois · Août</span>
               <div className="flex flex-col gap-3.5">
                 <h2 className="font-display text-ink text-[30px] md:text-[40px] leading-[1.06]">
-                  Douze questions pour connaître le mall par cœur
+                  {TOTAL_QUESTIONS} questions pour connaître le mall par cœur
                 </h2>
                 <p className="text-[12.5px] leading-[1.7] text-ink-2 text-pretty">
-                  Un quiz par boutique, écrit avec les équipes du centre. Chaque
+                  Un quiz là où l&apos;enseigne dit ce qu&apos;elle vend. Chaque
                   bonne réponse vaut 50 XP et rapproche vos bons de réduction.
                 </p>
                 <div className="flex flex-wrap gap-2.5 mt-1.5">

@@ -32,9 +32,9 @@ export const BADGES: Badge[] = [
   {
     id: "scholar",
     name: "Érudit",
-    description: "Répondez correctement à 8 questions",
+    description: "Répondez correctement à 6 questions",
     icon: "🎓",
-    condition: { type: "questions_correct", count: 8 },
+    condition: { type: "questions_correct", count: 6 },
   },
   {
     id: "champion",
@@ -67,7 +67,7 @@ export const REWARDS: Reward[] = [
     title: "Offre Beauté",
     description: "Réduction exclusive beauté et cosmétiques",
     discount: "-20%",
-    storeName: "SEPHORA",
+    storeName: "FACES",
     requiredXp: 300,
   },
   {
@@ -76,6 +76,8 @@ export const REWARDS: Reward[] = [
     description: "La récompense ultime pour les champions du mall",
     discount: "-25%",
     storeName: "Tout le Mall",
-    requiredXp: 500,
+    // 450, not 500: the ceiling is exactly 500 XP now (15 shops + 7 questions),
+    // so a 500 gate would need a flawless run to unlock at all.
+    requiredXp: 450,
   },
 ];

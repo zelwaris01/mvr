@@ -2,11 +2,23 @@
 
 import { useState } from "react";
 import { STORES } from "@/app/_lib/stores-data";
+import { TOTAL_STORES } from "@/app/_lib/constants";
 import { StoreCard } from "@/app/_components/StoreCard";
 import { SectionTitle } from "@/app/_components/SectionTitle";
 import { useGame } from "@/app/_components/GameStateProvider";
 
-const CATEGORIES = ["Tout", "Mode", "Chaussures", "Beauté", "Sport", "Alimentation"];
+/**
+ * Built from the roster, not typed by hand: the old list named Chaussures —
+ * a category no shop in either scan belongs to — and had no Électronique,
+ * Lingerie, Animation or Événement, so four real shops were unreachable by
+ * filter. Tag a shop in Workshop and its category appears here on its own.
+ */
+const CATEGORIES = [
+  "Tout",
+  ...[...new Set(STORES.map((s) => s.category))].sort((a, b) =>
+    a.localeCompare(b, "fr")
+  ),
+];
 
 export default function StoresPage() {
   const { isHydrated, progress } = useGame();
@@ -20,7 +32,7 @@ export default function StoresPage() {
       <div className="max-w-[1440px] mx-auto px-5 md:px-[34px] pt-10 md:pt-14">
         <div className="h-10 w-64 bg-surface-1 rounded animate-pulse mb-8" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px]">
-          {[...Array(8)].map((_, i) => (
+          {[...Array(TOTAL_STORES)].map((_, i) => (
             <div key={i} className="h-[300px] rounded-[14px] bg-surface-1 animate-pulse" />
           ))}
         </div>

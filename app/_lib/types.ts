@@ -1,26 +1,35 @@
 // ---- Store ----
-export interface Product {
-  id: string;
-  name: string;
-  image: string;
-  price: string;
+
+/**
+ * A call to action carried by the shop's own Matterport pin — "Acheter en
+ * ligne", "Offrez un Chèque Cadeau", an Instagram page. Kept verbatim: these
+ * are the mall's links, not ours.
+ */
+export interface StoreLink {
+  label: string;
+  href: string;
 }
 
-export interface Offer {
-  id: string;
-  title: string;
-  description: string;
-  discount: string;
-}
+/**
+ * Which scan a shop sits in. Smart Mall is not one multi-storey model but two
+ * separate ones, so the level is a property of the shop, not of a floor index.
+ */
+export type MallLevel = "N0" | "N1";
 
 export interface Store {
   slug: string;
   name: string;
-  logo: string;
+  /** The Matterport pin this entry came from. The model is the source of truth. */
+  tagId: string;
+  level: MallLevel;
   description: string;
   category: string;
-  products: Product[];
-  offers: Offer[];
+  /**
+   * The photos the pin carries, in the model's own order — the first is
+   * usually the brand's logo. Two pins carry none, so this can be empty.
+   */
+  gallery: string[];
+  links: StoreLink[];
 }
 
 // ---- Quiz ----

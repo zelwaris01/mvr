@@ -4,8 +4,10 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+        // Where the pins' own attachments live. Every shop photo in the
+        // catalogue is one of these; nothing is stock imagery any more.
         protocol: "https",
-        hostname: "images.unsplash.com",
+        hostname: "cdn-2.matterport.com",
       },
     ],
   },

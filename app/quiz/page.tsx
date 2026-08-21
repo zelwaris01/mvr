@@ -139,8 +139,9 @@ export default function QuizHubPage() {
       {/* ── Footer note ── */}
       <div className="flex flex-wrap items-center justify-between gap-5 pt-1">
         <p className="text-[11.5px] leading-[1.6] text-ink-2 max-w-md text-pretty">
-          Chaque bonne réponse vaut 50 XP. Répondez aux douze questions pour
-          débloquer le badge Quiz Master et le bon de réduction −25 %.
+          Chaque bonne réponse vaut 50 XP. Répondez aux {TOTAL_QUESTIONS}{" "}
+          questions pour débloquer le badge Quiz Master. Neuf enseignes du mall
+          n&apos;ont pas de quiz : le modèle ne dit pas ce qu&apos;elles vendent.
         </p>
         <Link href="/rewards" className="btn btn-ghost">
           Voir mes récompenses

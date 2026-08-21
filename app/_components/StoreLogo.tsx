@@ -1,21 +1,33 @@
 /**
  * Meridian initial plate.
  *
- * The bundled /public/stores/*.svg files are dark-on-gold Arial placeholders
- * that fight the palette in light mode, so the kit sets a boutique's mark as
- * its initial in Instrument Serif on the inverted fill instead — the same
- * plate the design uses on store cards and boutique heroes.
+ * A shop's mark is its initials in Instrument Serif on the inverted fill —
+ * the same plate the design uses on store cards and boutique heroes.
+ *
+ * There is no logo file to load. The pins do carry the brands' real logos
+ * (usually the first photo in the gallery) and the cards show them; this plate
+ * is what stands in wherever a small, uniform mark is wanted, and for the two
+ * pins that carry no photo at all. The /public/stores/*.svg placeholders this
+ * once described belonged to the eight invented brands and are deleted.
  */
 const INITIALS: Record<string, string> = {
-  zara: "Z",
-  flo: "FL",
-  guess: "G",
-  birkenstock: "B",
-  mango: "M",
-  sephora: "S",
-  nike: "N",
-  paul: "P",
+  electroplanet: "EP",
+  razana: "RZ",
+  springfield: "SF",
+  lnko: "LN",
+  "duo-zou-lu": "DZ",
+  "planet-sport": "PS",
+  womensecret: "WS",
+  faces: "FA",
+  rosabella: "RB",
+  carrousel: "CA",
+  chocorico: "CH",
+  "maki-mac": "MM",
+  sogno: "SO",
+  alti: "AL",
+  "summer-market": "SM",
 };
+
 
 export function StoreLogo({
   slug,

@@ -5,13 +5,15 @@ import Image from "next/image";
 import type { Store } from "@/app/_lib/types";
 import { useGame } from "./GameStateProvider";
 import { QUESTIONS } from "@/app/_lib/questions-data";
-import { XP_PER_STORE_VISIT } from "@/app/_lib/constants";
+import { LEVEL_LABELS, XP_PER_STORE_VISIT } from "@/app/_lib/constants";
 
 export function StoreCard({ store }: { store: Store }) {
   const { progress } = useGame();
   const explored = progress.exploredStores.includes(store.slug);
-  const heroImage = store.products[0]?.image;
-  const thumbs = store.products.slice(1, 3);
+  // The pin’s own photography: first frame is the brand mark, the next two
+  // fill the strip. Two pins carry no photo at all, so both can be empty.
+  const heroImage = store.gallery[0];
+  const thumbs = store.gallery.slice(1, 3);
   const storeQs = QUESTIONS.filter((q) => q.storeSlug === store.slug);
   const unanswered = storeQs.filter((q) => !progress.answeredQuestions[q.id]).length;
   const availableXp = explored
@@ -57,28 +59,28 @@ export function StoreCard({ store }: { store: Store }) {
           <span className="font-display text-[20px] leading-none text-ink">
             {store.name}
           </span>
-          {store.offers[0] && (
-            <span className="text-brass text-[11.5px] font-semibold leading-none">
-              {store.offers[0].discount}
-            </span>
-          )}
+          <span className="text-brass text-[11.5px] font-semibold leading-none">
+            {LEVEL_LABELS[store.level]}
+          </span>
         </div>
         <span className="text-[11.5px] text-ink-3 leading-none">
-          {store.category} · {store.products.length} pièces
-          {storeQs.length > 0 && ` · ${storeQs.length} questions`}
+          {store.category} · {store.gallery.length} photo
+          {store.gallery.length === 1 ? "" : "s"}
+          {storeQs.length > 0 &&
+            ` · ${storeQs.length} question${storeQs.length === 1 ? "" : "s"}`}
         </span>
       </div>
 
       {/* ── Mini collection strip ── */}
       <div className="flex gap-[7px]">
-        {thumbs.map((p) => (
+        {thumbs.map((src) => (
           <div
-            key={p.id}
+            key={src}
             className="relative flex-1 h-[52px] rounded-md overflow-hidden bg-surface-2 border border-line"
           >
             <Image
-              src={p.image}
-              alt={p.name}
+              src={src}
+              alt={store.name}
               fill
               className="object-cover opacity-80"
               sizes="80px"
@@ -89,7 +91,7 @@ export function StoreCard({ store }: { store: Store }) {
           <span className="text-[10.5px] font-medium text-ink-3 leading-none">
             {unanswered > 0 && !explored
               ? `+${storeQs.length}`
-              : `${store.products.length} réf.`}
+              : `${store.gallery.length} photo${store.gallery.length === 1 ? "" : "s"}`}
           </span>
         </div>
       </div>
